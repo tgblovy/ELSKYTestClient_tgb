@@ -332,7 +332,7 @@ void ClientWindow::setupUI()
 
     // 上次开机
     QHBoxLayout *bootLayout = new QHBoxLayout();
-    bootLayout->setSpacing(4);  // 减小间距
+    bootLayout->setSpacing(2);  // 减小间距
     QLabel *bootTitle = new QLabel("上次开机:", this);
     bootTitle->setStyleSheet("font-weight: bold; font-size: 12px;");  // 缩小字体
     lastBootLabel = new QLabel("--", this);
