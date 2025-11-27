@@ -6,6 +6,10 @@
 #include <QDateTime>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QDebug>
+
+QString homeDir = QDir::homePath();
+QString logFilePath = homeDir + "/.monitor_log/device.log";
 
 DeviceManager::DeviceManager(QObject *parent)
     : QObject(parent)
@@ -54,6 +58,35 @@ void DeviceManager::startDetection()
 
     // 初始设备扫描
     checkDevices();
+    //将设备信息保存到log文件中
+    bool isFirstWrite = true;
+    QString result = "\n] 设备扫描结果:\n";
+    for (const QString &device : deviceList) {
+        // 保存到设备文件
+        QFile file(logFilePath);
+
+        //判断文件目录是否存在
+        QFileInfo fileInfo(logFilePath);
+        QDir logDir = fileInfo.absoluteDir();
+        if (!logDir.exists()) {
+            qDebug() << "创建日志目录:" << logDir.absolutePath();
+                if (!logDir.mkpath(".")) {
+                    qWarning() << "无法创建日志目录:" << logDir.absolutePath();
+                    return;
+                   }
+                }
+                if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+                    QTextStream out(&file);
+                    // 如果是第一次写入，添加时间和说明
+                    if (isFirstWrite) {
+                        out << "[" << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                        << result.toUtf8();//解决log文件下中文乱码问题
+                        isFirstWrite = false;
+                     }
+                        out << device;
+                        file.close();
+                    }
+            }
 
     // 启动定时器，每2秒检查一次
     detectionTimer->start(2000);
@@ -110,6 +143,8 @@ void DeviceManager::checkDevices()
     checkUsbDevices();
     checkInputDevices();
     checkDisplayDevices();
+    checkPciDevices();
+    checkNetworkDevices();
 }
 
 void DeviceManager::onUsbDeviceChanged()
@@ -139,10 +174,15 @@ void DeviceManager::checkUsbDevices()
 
         // 修复：使用兼容的方式分割字符串
         QStringList lines = output.split('\n');
+
+        deviceList.append("USB设备：\n");
         QStringList nonEmptyLines;
         for (const QString &line : lines) {
             if (!line.trimmed().isEmpty()) {
                 nonEmptyLines.append(line);
+
+                //插入到总的设备集合中，作为监控设备掉没掉的依据
+                deviceList.append(line+"\n");
             }
         }
 
@@ -175,12 +215,16 @@ void DeviceManager::checkInputDevices()
 
     QStringList inputFiles = inputDir.entryList(QStringList() << "event*", QDir::System);
 
+    deviceList.append("输入设备:\n");
     for (const QString &inputFile : inputFiles) {
         QString devicePath = inputDir.absoluteFilePath(inputFile);
         QString deviceInfo = getInputDeviceInfo(devicePath);
 
         if (!deviceInfo.isEmpty()) {
             currentInputDevices.insert(devicePath);
+
+            //追加到总的设备集合中，作为监控设备掉没掉的依据
+            deviceList.append(deviceInfo+"\n");
 
             if (!previousInputDevices.contains(devicePath)) {
                 emit inputDeviceChanged("add", deviceInfo);
@@ -205,6 +249,10 @@ void DeviceManager::checkDisplayDevices()
 {
     QString currentDisplayInfo = getDisplayInfo();
 
+    //追加到总的设备集合中，作为监控设备掉没掉的依据
+    deviceList.append("显示设备:\n");
+    deviceList.append(currentDisplayInfo+"\n");
+
     if (currentDisplayInfo != previousDisplayInfo) {
         if (!previousDisplayInfo.isEmpty()) {
             emit displayChanged("change", currentDisplayInfo);
@@ -224,6 +272,8 @@ void DeviceManager::checkPciDevices()
 
         // 修复：使用兼容的方式分割字符串
         QStringList lines = output.split('\n');
+
+        deviceList.append("PCI设备列表：\n");
         QStringList nonEmptyLines;
         for (const QString &line : lines) {
             if (!line.trimmed().isEmpty()) {
@@ -235,6 +285,9 @@ void DeviceManager::checkPciDevices()
         for (const QString &device : nonEmptyLines) {
             if (device.contains("VGA") || device.contains("Display") ||
                 device.contains("USB") || device.contains("Network")) {
+                //放到device集合中，作为日志文件
+                deviceList.append(device.trimmed()+"\n");
+
                 emit deviceChanged("  " + device.trimmed());
             }
         }
@@ -252,9 +305,14 @@ void DeviceManager::checkNetworkDevices()
         // 修复：使用兼容的方式分割字符串
         QStringList lines = output.split('\n');
         QStringList nonEmptyLines;
+
+        deviceList.append("网络设备列表:\n");
         for (const QString &line : lines) {
             if (!line.trimmed().isEmpty()) {
                 nonEmptyLines.append(line);
+
+                //放到device集合中，作为日志文件
+                deviceList.append(line.trimmed()+"\n");
             }
         }
 
