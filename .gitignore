@@ -1,40 +1,228 @@
-# Qt Creator 生成的构建目录
-build-*/
+# =================================
+# Qt 构建系统和编译输出
+# =================================
 
-# 编译产生的目标文件和中间文件
+# Qt Creator 构建目录
+build-*/
+*-build-*/
+Debug/
+Release/
+x64/
+x86/
+*.autosave
+
+# 编译中间文件
 *.o
 *.obj
 *.patch
+*.res
+*.pdb
+*.idb
+*.ilk
+*.exp
+*.lib
+*.a
+
+# Qt 元对象编译器输出
+moc_*
+qrc_*
+ui_*
 *.moc
+*.rcc
 *.qrc.d
 *.ui.h
 
-# 可执行文件
-*.app
-*.exe
-your_project_name # 替换为你的项目名
+# =================================
+# 可执行文件和库文件
+# =================================
 
-# 动态库和静态库
+# 可执行文件（根据你的项目调整名称）
+client_window
+system_controller
+basic_tester
+cycle_controller
+*.exe
+*.app
+*.dll
 *.so
 *.so.*
 *.dylib
-*.a
-*.lib
+*.dylib.*
 
-# Qt Creator 用户设置
-.qtcreator/
+# =================================
+# IDE 和编辑器文件
+# =================================
+
+# Qt Creator
 *.user
 *.user.*
+*.pro.user
+.qtcreator/
+*.autosave
 
-# 系统文件
+# VS Code
+.vscode/
+!.vscode/settings.json.example
+!.vscode/tasks.json.example
+!.vscode/launch.json.example
+
+# CLion
+.idea/
+cmake-build-*/
+*.iws
+
+# Vim
+*.swp
+*.swo
+*.un~
+
+# =================================
+# 操作系统特定文件
+# =================================
+
+# macOS
 .DS_Store
-Thumbs.db
+.AppleDouble
+.LSOverride
+._*
 
-# 调试文件
-core
-*.core
-gmon.out
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# =================================
+# 项目特定文件（根据你的项目结构调整）
+# =================================
+
+# 核心模块可能生成的临时文件
+core/core_*.tmp
+core/*.log
+
+# 对话框可能生成的缓存
+dialogs/*.cache
+
+# 通用模块的临时文件
+common/*.tmp
+
+# 自动启动管理器的临时配置
+auto_start_*.tmp
+
+# 设备管理器的缓存文件
+device_manager_*.cache
+*.device_cache
+
+# 日志文件（保留日志配置，但忽略生成的日志）
+*.log
+logs/
+!logger.h
+!logger.cpp
+
+# =================================
+# 依赖和第三方库
+# =================================
+
+# 第三方库目录
+3rdparty/
+libs/
+external/
+
+# 包管理文件
+conanfile.txt
+conan.lock
+vcpkg.json
+
+# =================================
+# 配置和缓存文件
+# =================================
+
+# 本地配置文件
+*.local
+*.config
+config.local.ini
+settings.local.ini
+
+# 缓存文件
+.cache/
+*.cache
 
 # 临时文件
-*~
 *.tmp
+*.temp
+tmp/
+
+# =================================
+# 备份文件
+# =================================
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+
+# =================================
+# 版本控制系统
+# =================================
+.svn/
+*.patch
+
+# =================================
+# 文档生成
+# =================================
+docs/_build/
+html/
+latex/
+*.aux
+*.toc
+
+# =================================
+# 必须保留的重要文件（否定模式）
+# =================================
+
+# 源代码文件 - 必须保留！
+!*.h
+!*.hpp
+!*.cpp
+!*.c
+!*.cc
+!*.cxx
+
+# Qt 项目文件
+!*.pro
+!*.pri
+!*.prf
+!*.qrc
+!*.ui
+
+# 配置文件模板
+!*.example
+!*.sample
+!*.template
+
+# 文档文件
+!*.md
+!*.txt
+!*.pdf
+!*.rst
+
+# CMake 文件
+!CMakeLists.txt
+!*.cmake.in
+
+# 资源文件
+!*.png
+!*.jpg
+!*.jpeg
+!*.gif
+!*.svg
+!*.ico
+!*.qm
+!*.ts
+
+# 协议文件
+!protocol.h
