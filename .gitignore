@@ -1,0 +1,40 @@
+# Qt Creator 生成的构建目录
+build-*/
+
+# 编译产生的目标文件和中间文件
+*.o
+*.obj
+*.patch
+*.moc
+*.qrc.d
+*.ui.h
+
+# 可执行文件
+*.app
+*.exe
+your_project_name # 替换为你的项目名
+
+# 动态库和静态库
+*.so
+*.so.*
+*.dylib
+*.a
+*.lib
+
+# Qt Creator 用户设置
+.qtcreator/
+*.user
+*.user.*
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 调试文件
+core
+*.core
+gmon.out
+
+# 临时文件
+*~
+*.tmp
