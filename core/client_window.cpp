@@ -8,8 +8,6 @@
 #include "device_manager.h"
 #include "logger.h"
 
-#include <QDebug>
-#include <QDir>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -332,7 +330,7 @@ void ClientWindow::setupUI()
 
     // 上次开机
     QHBoxLayout *bootLayout = new QHBoxLayout();
-    bootLayout->setSpacing(4);  // 减小间距
+    bootLayout->setSpacing(2);  // 减小间距
     QLabel *bootTitle = new QLabel("上次开机:", this);
     bootTitle->setStyleSheet("font-weight: bold; font-size: 12px;");  // 缩小字体
     lastBootLabel = new QLabel("--", this);
@@ -611,13 +609,6 @@ void ClientWindow::showEvent(QShowEvent *event)
             sizes << totalWidth / 2 << totalWidth / 2;
             splitter->setSizes(sizes);
         }
-
-        //窗体加载后自动打开设备实时监控
-        QTimer::singleShot(100, this, [this](){
-            deviceDetectButton->setText("停止检测");
-            deviceDetectButton->setStyleSheet("QPushButton { background-color: #f44336; color: white; }");
-            deviceManager->startDetection();
-        });
     });
 }
 
