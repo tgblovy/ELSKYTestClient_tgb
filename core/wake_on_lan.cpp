@@ -10,13 +10,15 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QNetworkInterface>
-#include <QDataStream>  // 添加这行
+#include <QDataStream>
+#include <QSettings>
 
 WakeOnLan::WakeOnLan(QObject *parent)
     : QObject(parent)
     , wolToggleButton(nullptr)
     , serverConnector(nullptr)
     , isWakeOnLanEnabled(false)
+    , currentInterval(60)
 {
 }
 
@@ -24,6 +26,68 @@ void WakeOnLan::setupUI(QPushButton *button)
 {
     wolToggleButton = button;
     connect(wolToggleButton, &QPushButton::clicked, this, &WakeOnLan::onWakeOnLanToggle);
+
+    // 加载保存的状态
+    loadState();
+}
+
+void WakeOnLan::loadState()
+{
+    QSettings settings("ELSKY", "TestClient");
+    isWakeOnLanEnabled = settings.value("wakeonlan/enabled", false).toBool();
+    currentMacAddress = settings.value("wakeonlan/macAddress", "").toString();
+    currentInterval = settings.value("wakeonlan/interval", 60).toInt();
+
+    if (wolToggleButton) {
+        if (isWakeOnLanEnabled && !currentMacAddress.isEmpty()) {
+            wolToggleButton->setText("取消唤醒");
+            wolToggleButton->setStyleSheet("QPushButton { background-color: #f44336; color: white; }");
+            emit logMessage("检测到未完成的网络唤醒配置，状态已恢复");
+        } else {
+            wolToggleButton->setText("启动唤醒");
+            wolToggleButton->setStyleSheet("QPushButton { background-color: #2196F3; color: white; }");
+            isWakeOnLanEnabled = false;
+        }
+    }
+}
+
+void WakeOnLan::saveState()
+{
+    QSettings settings("ELSKY", "TestClient");
+    settings.setValue("wakeonlan/enabled", isWakeOnLanEnabled);
+    settings.setValue("wakeonlan/macAddress", currentMacAddress);
+    settings.setValue("wakeonlan/interval", currentInterval);
+}
+
+QString WakeOnLan::getLocalMacAddress()
+{
+    foreach (QNetworkInterface interface, QNetworkInterface::allInterfaces()) {
+        // 跳过回环接口和未启用的接口
+        if (interface.flags().testFlag(QNetworkInterface::IsLoopBack) ||
+            !interface.flags().testFlag(QNetworkInterface::IsUp) ||
+            !interface.flags().testFlag(QNetworkInterface::IsRunning)) {
+            continue;
+        }
+
+        // 优先选择以太网接口
+        if (interface.type() == QNetworkInterface::Ethernet &&
+            !interface.hardwareAddress().isEmpty() &&
+            interface.hardwareAddress() != "00:00:00:00:00:00") {
+            return interface.hardwareAddress();
+        }
+    }
+
+    // 如果没有找到以太网接口，返回第一个有效的MAC地址
+    foreach (QNetworkInterface interface, QNetworkInterface::allInterfaces()) {
+        if (!interface.hardwareAddress().isEmpty() &&
+            interface.hardwareAddress() != "00:00:00:00:00:00" &&
+            interface.flags().testFlag(QNetworkInterface::IsUp) &&
+            interface.flags().testFlag(QNetworkInterface::IsRunning)) {
+            return interface.hardwareAddress();
+        }
+    }
+
+    return "00:00:00:00:00:00";
 }
 
 void WakeOnLan::onWakeOnLanToggle()
@@ -38,21 +102,6 @@ void WakeOnLan::onWakeOnLanToggle()
     } else {
         cancelWakeOnLan();
     }
-}
-
-QString WakeOnLan::getLocalMacAddress()
-{
-    foreach (QNetworkInterface interface, QNetworkInterface::allInterfaces()) {
-        if (interface.flags().testFlag(QNetworkInterface::IsLoopBack) ||
-            !interface.flags().testFlag(QNetworkInterface::IsUp) ||
-            !interface.flags().testFlag(QNetworkInterface::IsRunning)) {
-            continue;
-        }
-        if (!interface.hardwareAddress().isEmpty()) {
-            return interface.hardwareAddress();
-        }
-    }
-    return "00:00:00:00:00:00";
 }
 
 void WakeOnLan::setupWakeOnLan()
@@ -75,7 +124,7 @@ void WakeOnLan::setupWakeOnLan()
     QLabel *intervalLabel = new QLabel("唤醒间隔:", &dialog);
     QSpinBox *intervalSpin = new QSpinBox(&dialog);
     intervalSpin->setRange(1, 86400);
-    intervalSpin->setValue(60);
+    intervalSpin->setValue(currentInterval);
     intervalSpin->setSuffix("秒");
     intervalLayout->addWidget(intervalLabel);
     intervalLayout->addWidget(intervalSpin);
@@ -115,6 +164,11 @@ void WakeOnLan::setupWakeOnLan()
             serverConnector->sendMessage(msg);
 
             isWakeOnLanEnabled = true;
+            currentMacAddress = macAddress;
+            currentInterval = intervalSpin->value();
+
+            saveState();
+
             wolToggleButton->setText("取消唤醒");
             wolToggleButton->setStyleSheet("QPushButton { background-color: #f44336; color: white; }");
             emit logMessage(QString("设置网络唤醒: MAC=%1, 间隔=%2秒").arg(macAddress).arg(intervalSpin->value()));
@@ -131,7 +185,7 @@ void WakeOnLan::cancelWakeOnLan()
         msg.type = MSG_WAKE_ON_LAN_CANCEL;
         msg.clientId = getLocalMacAddress();
         WakeOnLanConfig config;
-        config.macAddress = getLocalMacAddress();
+        config.macAddress = currentMacAddress.isEmpty() ? getLocalMacAddress() : currentMacAddress;
         config.enabled = false;
         QByteArray data;
         QDataStream stream(&data, QIODevice::WriteOnly);
@@ -140,6 +194,10 @@ void WakeOnLan::cancelWakeOnLan()
         serverConnector->sendMessage(msg);
 
         isWakeOnLanEnabled = false;
+
+        QSettings settings("ELSKY", "TestClient");
+        settings.remove("wakeonlan");
+
         wolToggleButton->setText("启动唤醒");
         wolToggleButton->setStyleSheet("QPushButton { background-color: #2196F3; color: white; }");
         emit logMessage("取消网络唤醒");

@@ -4,7 +4,12 @@
 #include <QObject>
 #include <QComboBox>
 #include <QPushButton>
-#include <QString>  // 确保包含QString
+#include <QString>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QTimer>
+#include <QElapsedTimer>
+#include <QTime>
 
 class BasicTester : public QObject
 {
@@ -12,6 +17,7 @@ class BasicTester : public QObject
 
 public:
     explicit BasicTester(QObject *parent = nullptr);
+    // 移除析构函数声明，使用默认析构函数
 
     void setupUI(QComboBox *combo, QPushButton *button);
 
@@ -25,6 +31,7 @@ private slots:
     void onHibernate();
     void onComTest();
     void onUsbSpeedTest();
+    void onNetworkSpeedTest();
 
 signals:
     void logMessage(const QString &message);

@@ -29,6 +29,7 @@ SOURCES += \
     core/basic_tester.cpp \
     core/server_connector.cpp \
     core/system_controller.cpp \
+	core/network_speed_tester.cpp \
     core/wake_on_lan.cpp \
     core/cycle_controller.cpp \
     core/system_monitor.cpp \
@@ -44,6 +45,7 @@ HEADERS += \
     core/basic_tester.h \
     core/server_connector.h \
     core/system_controller.h \
+	core/network_speed_tester.h \
     core/wake_on_lan.h \
     core/cycle_controller.h \
     core/system_monitor.h \

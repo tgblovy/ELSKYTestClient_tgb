@@ -8,8 +8,6 @@
 #include "device_manager.h"
 #include "logger.h"
 
-#include <QDebug>
-#include <QDir>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -73,6 +71,10 @@ ClientWindow::ClientWindow(QWidget *parent)
 ClientWindow::~ClientWindow()
 {
     // 析构函数会自动删除子对象
+    // 保存各个模块的状态
+    if (wakeOnLan) {
+        wakeOnLan->saveState();
+    }
 }
 
 void ClientWindow::setupUI()
@@ -114,6 +116,7 @@ void ClientWindow::setupUI()
     basicTestCombo->addItem("休眠");
     basicTestCombo->addItem("COM测试");
     basicTestCombo->addItem("U盘测速");
+    basicTestCombo->addItem("网络测速");  // 新增网络测速选项
     basicTestCombo->setMinimumWidth(100);
     basicTestCombo->setMaximumHeight(25);
 
@@ -611,13 +614,6 @@ void ClientWindow::showEvent(QShowEvent *event)
             sizes << totalWidth / 2 << totalWidth / 2;
             splitter->setSizes(sizes);
         }
-
-        //窗体加载后自动打开设备实时监控
-        QTimer::singleShot(100, this, [this](){
-            deviceDetectButton->setText("停止检测");
-            deviceDetectButton->setStyleSheet("QPushButton { background-color: #f44336; color: white; }");
-            deviceManager->startDetection();
-        });
     });
 }
 
@@ -640,6 +636,9 @@ void ClientWindow::closeEvent(QCloseEvent *event)
     // 保存状态
     if (cycleController) {
         cycleController->saveState();
+    }
+    if (wakeOnLan) {
+        wakeOnLan->saveState();  // 新增：保存网络唤醒状态
     }
     if (logger) {
         logger->saveLogToFile();

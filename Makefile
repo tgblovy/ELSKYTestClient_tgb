@@ -37,7 +37,7 @@ MOVE          = mv -f
 TAR           = tar -cf
 COMPRESS      = gzip -9f
 DISTNAME      = ELSKY_test_client1.0.0
-DISTDIR = /home/it0/桌面/elsky/build/obj/ELSKY_test_client1.0.0
+DISTDIR = /home/it0/ELSKYTestClient/build/obj/ELSKY_test_client1.0.0
 LINK          = g++
 LFLAGS        = -Wl,-O1
 LIBS          = $(SUBLIBS) /usr/lib/x86_64-linux-gnu/libQt5Widgets.so /usr/lib/x86_64-linux-gnu/libQt5Gui.so /usr/lib/x86_64-linux-gnu/libQt5Network.so /usr/lib/x86_64-linux-gnu/libQt5Core.so /usr/lib/x86_64-linux-gnu/libGL.so -lpthread   
@@ -58,6 +58,7 @@ SOURCES       = main.cpp \
 		core/basic_tester.cpp \
 		core/server_connector.cpp \
 		core/system_controller.cpp \
+		core/network_speed_tester.cpp \
 		core/wake_on_lan.cpp \
 		core/cycle_controller.cpp \
 		core/system_monitor.cpp \
@@ -69,6 +70,7 @@ SOURCES       = main.cpp \
 		build/moc/moc_client_window.cpp \
 		build/moc/moc_basic_tester.cpp \
 		build/moc/moc_server_connector.cpp \
+		build/moc/moc_network_speed_tester.cpp \
 		build/moc/moc_wake_on_lan.cpp \
 		build/moc/moc_cycle_controller.cpp \
 		build/moc/moc_system_monitor.cpp \
@@ -82,6 +84,7 @@ OBJECTS       = build/obj/main.o \
 		build/obj/basic_tester.o \
 		build/obj/server_connector.o \
 		build/obj/system_controller.o \
+		build/obj/network_speed_tester.o \
 		build/obj/wake_on_lan.o \
 		build/obj/cycle_controller.o \
 		build/obj/system_monitor.o \
@@ -94,6 +97,7 @@ OBJECTS       = build/obj/main.o \
 		build/obj/moc_client_window.o \
 		build/obj/moc_basic_tester.o \
 		build/obj/moc_server_connector.o \
+		build/obj/moc_network_speed_tester.o \
 		build/obj/moc_wake_on_lan.o \
 		build/obj/moc_cycle_controller.o \
 		build/obj/moc_system_monitor.o \
@@ -181,6 +185,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		core/basic_tester.h \
 		core/server_connector.h \
 		core/system_controller.h \
+		core/network_speed_tester.h \
 		core/wake_on_lan.h \
 		core/cycle_controller.h \
 		core/system_monitor.h \
@@ -194,6 +199,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		core/basic_tester.cpp \
 		core/server_connector.cpp \
 		core/system_controller.cpp \
+		core/network_speed_tester.cpp \
 		core/wake_on_lan.cpp \
 		core/cycle_controller.cpp \
 		core/system_monitor.cpp \
@@ -382,8 +388,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents core/auto_start_manager.h core/client_window.h core/basic_tester.h core/server_connector.h core/system_controller.h core/wake_on_lan.h core/cycle_controller.h core/system_monitor.h core/device_manager.h core/logger.h dialogs/com_test_dialog.h dialogs/usb_speed_dialog.h common/protocol.h $(DISTDIR)/
-	$(COPY_FILE) --parents main.cpp core/auto_start_manager.cpp core/client_window.cpp core/basic_tester.cpp core/server_connector.cpp core/system_controller.cpp core/wake_on_lan.cpp core/cycle_controller.cpp core/system_monitor.cpp core/device_manager.cpp core/logger.cpp dialogs/com_test_dialog.cpp dialogs/usb_speed_dialog.cpp common/protocol.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents core/auto_start_manager.h core/client_window.h core/basic_tester.h core/server_connector.h core/system_controller.h core/network_speed_tester.h core/wake_on_lan.h core/cycle_controller.h core/system_monitor.h core/device_manager.h core/logger.h dialogs/com_test_dialog.h dialogs/usb_speed_dialog.h common/protocol.h $(DISTDIR)/
+	$(COPY_FILE) --parents main.cpp core/auto_start_manager.cpp core/client_window.cpp core/basic_tester.cpp core/server_connector.cpp core/system_controller.cpp core/network_speed_tester.cpp core/wake_on_lan.cpp core/cycle_controller.cpp core/system_monitor.cpp core/device_manager.cpp core/logger.cpp dialogs/com_test_dialog.cpp dialogs/usb_speed_dialog.cpp common/protocol.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -414,66 +420,71 @@ compiler_moc_predefs_clean:
 build/moc/moc_predefs.h: /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 	g++ -pipe -march=x86-64 -O2 -std=gnu++11 -Wall -W -dM -E -o build/moc/moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 
-compiler_moc_header_make_all: build/moc/moc_auto_start_manager.cpp build/moc/moc_client_window.cpp build/moc/moc_basic_tester.cpp build/moc/moc_server_connector.cpp build/moc/moc_wake_on_lan.cpp build/moc/moc_cycle_controller.cpp build/moc/moc_system_monitor.cpp build/moc/moc_device_manager.cpp build/moc/moc_logger.cpp build/moc/moc_com_test_dialog.cpp build/moc/moc_usb_speed_dialog.cpp
+compiler_moc_header_make_all: build/moc/moc_auto_start_manager.cpp build/moc/moc_client_window.cpp build/moc/moc_basic_tester.cpp build/moc/moc_server_connector.cpp build/moc/moc_network_speed_tester.cpp build/moc/moc_wake_on_lan.cpp build/moc/moc_cycle_controller.cpp build/moc/moc_system_monitor.cpp build/moc/moc_device_manager.cpp build/moc/moc_logger.cpp build/moc/moc_com_test_dialog.cpp build/moc/moc_usb_speed_dialog.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) build/moc/moc_auto_start_manager.cpp build/moc/moc_client_window.cpp build/moc/moc_basic_tester.cpp build/moc/moc_server_connector.cpp build/moc/moc_wake_on_lan.cpp build/moc/moc_cycle_controller.cpp build/moc/moc_system_monitor.cpp build/moc/moc_device_manager.cpp build/moc/moc_logger.cpp build/moc/moc_com_test_dialog.cpp build/moc/moc_usb_speed_dialog.cpp
+	-$(DEL_FILE) build/moc/moc_auto_start_manager.cpp build/moc/moc_client_window.cpp build/moc/moc_basic_tester.cpp build/moc/moc_server_connector.cpp build/moc/moc_network_speed_tester.cpp build/moc/moc_wake_on_lan.cpp build/moc/moc_cycle_controller.cpp build/moc/moc_system_monitor.cpp build/moc/moc_device_manager.cpp build/moc/moc_logger.cpp build/moc/moc_com_test_dialog.cpp build/moc/moc_usb_speed_dialog.cpp
 build/moc/moc_auto_start_manager.cpp: core/auto_start_manager.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/auto_start_manager.h -o build/moc/moc_auto_start_manager.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/auto_start_manager.h -o build/moc/moc_auto_start_manager.cpp
 
 build/moc/moc_client_window.cpp: core/client_window.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/client_window.h -o build/moc/moc_client_window.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/client_window.h -o build/moc/moc_client_window.cpp
 
 build/moc/moc_basic_tester.cpp: core/basic_tester.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/basic_tester.h -o build/moc/moc_basic_tester.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/basic_tester.h -o build/moc/moc_basic_tester.cpp
 
 build/moc/moc_server_connector.cpp: core/server_connector.h \
 		common/protocol.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/server_connector.h -o build/moc/moc_server_connector.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/server_connector.h -o build/moc/moc_server_connector.cpp
+
+build/moc/moc_network_speed_tester.cpp: core/network_speed_tester.h \
+		build/moc/moc_predefs.h \
+		/usr/lib/qt5/bin/moc
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/network_speed_tester.h -o build/moc/moc_network_speed_tester.cpp
 
 build/moc/moc_wake_on_lan.cpp: core/wake_on_lan.h \
 		common/protocol.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/wake_on_lan.h -o build/moc/moc_wake_on_lan.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/wake_on_lan.h -o build/moc/moc_wake_on_lan.cpp
 
 build/moc/moc_cycle_controller.cpp: core/cycle_controller.h \
 		common/protocol.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/cycle_controller.h -o build/moc/moc_cycle_controller.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/cycle_controller.h -o build/moc/moc_cycle_controller.cpp
 
 build/moc/moc_system_monitor.cpp: core/system_monitor.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/system_monitor.h -o build/moc/moc_system_monitor.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/system_monitor.h -o build/moc/moc_system_monitor.cpp
 
 build/moc/moc_device_manager.cpp: core/device_manager.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/device_manager.h -o build/moc/moc_device_manager.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/device_manager.h -o build/moc/moc_device_manager.cpp
 
 build/moc/moc_logger.cpp: core/logger.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/logger.h -o build/moc/moc_logger.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include core/logger.h -o build/moc/moc_logger.cpp
 
 build/moc/moc_com_test_dialog.cpp: dialogs/com_test_dialog.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include dialogs/com_test_dialog.h -o build/moc/moc_com_test_dialog.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include dialogs/com_test_dialog.h -o build/moc/moc_com_test_dialog.cpp
 
 build/moc/moc_usb_speed_dialog.cpp: dialogs/usb_speed_dialog.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/桌面/elsky/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/桌面/elsky -I/home/it0/桌面/elsky/core -I/home/it0/桌面/elsky/dialogs -I/home/it0/桌面/elsky/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include dialogs/usb_speed_dialog.h -o build/moc/moc_usb_speed_dialog.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/it0/ELSKYTestClient/build/moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/it0/ELSKYTestClient -I/home/it0/ELSKYTestClient/core -I/home/it0/ELSKYTestClient/dialogs -I/home/it0/ELSKYTestClient/common -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include dialogs/usb_speed_dialog.h -o build/moc/moc_usb_speed_dialog.cpp
 
 compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
@@ -512,7 +523,8 @@ build/obj/client_window.o: core/client_window.cpp core/client_window.h \
 build/obj/basic_tester.o: core/basic_tester.cpp core/basic_tester.h \
 		core/system_controller.h \
 		dialogs/com_test_dialog.h \
-		dialogs/usb_speed_dialog.h
+		dialogs/usb_speed_dialog.h \
+		core/network_speed_tester.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/basic_tester.o core/basic_tester.cpp
 
 build/obj/server_connector.o: core/server_connector.cpp core/server_connector.h \
@@ -521,6 +533,9 @@ build/obj/server_connector.o: core/server_connector.cpp core/server_connector.h 
 
 build/obj/system_controller.o: core/system_controller.cpp core/system_controller.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/system_controller.o core/system_controller.cpp
+
+build/obj/network_speed_tester.o: core/network_speed_tester.cpp core/network_speed_tester.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/network_speed_tester.o core/network_speed_tester.cpp
 
 build/obj/wake_on_lan.o: core/wake_on_lan.cpp core/wake_on_lan.h \
 		common/protocol.h \
@@ -562,6 +577,9 @@ build/obj/moc_basic_tester.o: build/moc/moc_basic_tester.cpp
 
 build/obj/moc_server_connector.o: build/moc/moc_server_connector.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/moc_server_connector.o build/moc/moc_server_connector.cpp
+
+build/obj/moc_network_speed_tester.o: build/moc/moc_network_speed_tester.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/moc_network_speed_tester.o build/moc/moc_network_speed_tester.cpp
 
 build/obj/moc_wake_on_lan.o: build/moc/moc_wake_on_lan.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/moc_wake_on_lan.o build/moc/moc_wake_on_lan.cpp

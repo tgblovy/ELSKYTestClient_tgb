@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QPushButton>
-#include <QString>  // 确保包含QString
+#include <QString>
 #include "../common/protocol.h"
 
 class ServerConnector;
@@ -17,6 +17,8 @@ public:
 
     void setupUI(QPushButton *button);
     void setServerConnector(ServerConnector *connector) { serverConnector = connector; }
+    void loadState();
+    void saveState();
 
 signals:
     void logMessage(const QString &message);
@@ -33,6 +35,8 @@ private:
     QPushButton *wolToggleButton;
     ServerConnector *serverConnector;
     bool isWakeOnLanEnabled;
+    QString currentMacAddress;
+    int currentInterval;
 };
 
 #endif // WAKE_ON_LAN_H

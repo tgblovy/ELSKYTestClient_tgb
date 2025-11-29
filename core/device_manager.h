@@ -55,8 +55,6 @@ private:
     QSet<QString> previousUsbDevices;
     QSet<QString> previousInputDevices;
     QString previousDisplayInfo;
-    //设备信息
-     QList<QString> deviceList;
 
     bool isMonitoring;
 };
