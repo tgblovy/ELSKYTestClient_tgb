@@ -9,27 +9,33 @@ TEMPLATE = app
 CONFIG += c++11
 
 # 发布模式
-CONFIG += release
+#CONFIG += release
+
+# Qt模块（必须包含widgets）
+QT += core gui
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
+# C++标准
+CONFIG += c++11
+
+# 调试配置（关键部分）
+CONFIG += debug          # 启用调试
+CONFIG -= release        # 禁用发布模式
+CONFIG -= release_debug  # 禁用混合模式
 
 # 平台特定配置
-contains(ARCH, aarch64) {
-    # 飞腾平台优化
-    QMAKE_CXXFLAGS += -march=armv8-a
-    message("编译飞腾ARM64版本")
-} else {
-    # X86平台优化
-    QMAKE_CXXFLAGS += -march=x86-64
-    message("编译X86版本")
-}
+QMAKE_CXXFLAGS +=
+QMAKE_CXXFLAGS += -march=armv8-a
+message("编译飞腾ARM64版本")
 
 SOURCES += \
     main.cpp \
-	core/auto_start_manager.cpp \
+    core/auto_start_manager.cpp \
     core/client_window.cpp \
     core/basic_tester.cpp \
     core/server_connector.cpp \
     core/system_controller.cpp \
-	core/network_speed_tester.cpp \
+    core/network_speed_tester.cpp \
     core/wake_on_lan.cpp \
     core/cycle_controller.cpp \
     core/system_monitor.cpp \
@@ -40,12 +46,12 @@ SOURCES += \
     common/protocol.cpp
 
 HEADERS += \
-	core/auto_start_manager.h \
+    core/auto_start_manager.h \
     core/client_window.h \
     core/basic_tester.h \
     core/server_connector.h \
     core/system_controller.h \
-	core/network_speed_tester.h \
+    core/network_speed_tester.h \
     core/wake_on_lan.h \
     core/cycle_controller.h \
     core/system_monitor.h \
@@ -63,14 +69,14 @@ RESOURCES +=
 # 依赖库
 LIBS += -lpthread
 
-# 输出目录
-DESTDIR = $$PWD/bin
-OBJECTS_DIR = $$PWD/build/obj
-MOC_DIR = $$PWD/build/moc
-RCC_DIR = $$PWD/build/rcc
-UI_DIR = $$PWD/build/ui
+# 输出目录 - 使用相对路径避免变量转义问题
+DESTDIR = ./bin
+OBJECTS_DIR = ./build/obj
+MOC_DIR = ./build/moc
+RCC_DIR = ./build/rcc
+UI_DIR = ./build/ui
 
 # 包含路径
-INCLUDEPATH += $$PWD/core \
-               $$PWD/dialogs \
-               $$PWD/common
+INCLUDEPATH += ./core \
+               ./dialogs \
+               ./common
