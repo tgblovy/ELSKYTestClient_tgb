@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "=== 启动 研盛测试客户端 ==="
-echo "检测系统架构..."
+echo "1111111111检测系统架构..."
 
 ARCH=$(uname -m)
 APP_NAME="ELSKYTestClient"
