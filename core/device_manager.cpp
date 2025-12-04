@@ -7,7 +7,10 @@
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QDebug>
+#include <QPushButton>
+#include <QTextEdit>
 
+// 全局变量定义
 QString homeDir = QDir::homePath();
 QString logFilePath = homeDir + "/.monitor_log/device.log";
 
@@ -24,6 +27,9 @@ DeviceManager::DeviceManager(QObject *parent)
 
     fileWatcher = new QFileSystemWatcher(this);
     connect(fileWatcher, &QFileSystemWatcher::directoryChanged, this, &DeviceManager::onUsbDeviceChanged);
+
+    // 程序启动时加载上次的设备日志
+    loadPreviousDeviceLog();
 }
 
 DeviceManager::~DeviceManager()
@@ -45,49 +51,128 @@ void DeviceManager::setupUI(QPushButton *button, QTextEdit *textEdit)
     });
 }
 
+void DeviceManager::loadPreviousDeviceLog()
+{
+    // 加载上次保存的设备日志
+    QFile file(logFilePath);
+    if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&file);
+        while (!in.atEnd()) {
+            QString line = in.readLine().trimmed();
+            if (!line.isEmpty()) {
+                previousDeviceLog.append(line);
+            }
+        }
+        file.close();
+    }
+}
+
+void DeviceManager::saveDeviceLog()
+{
+    // 确保日志目录存在
+    QFileInfo fileInfo(logFilePath);
+    QDir logDir = fileInfo.absoluteDir();
+    if (!logDir.exists()) {
+        if (!logDir.mkpath(".")) {
+            qWarning() << "无法创建日志目录:" << logDir.absolutePath();
+            return;
+        }
+    }
+
+    // 覆盖写入日志文件
+    QFile file(logFilePath);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+
+        // 写入时间戳
+        out << "[" << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") << "] 设备扫描结果:\n";
+
+        // 写入当前设备列表
+        for (const QString &device : currentDeviceList) {
+            out << device << "\n";
+        }
+
+        file.close();
+
+        // 保存后更新上一次的日志记录
+        previousDeviceLog = currentDeviceList;
+
+        emit logMessage("设备日志已保存到: " + logFilePath);
+    } else {
+        qWarning() << "无法打开日志文件:" << logFilePath;
+    }
+}
+
+void DeviceManager::compareAndNotify()
+{
+    // 比较当前设备列表和上次日志
+    bool hasChanges = false;
+    QString changesText;
+
+    // 检查新增设备
+//    for (const QString &device : currentDeviceList) {
+//        if (!previousDeviceLog.contains(device)) {
+//            changesText += "<font color='green'>[新增] " + device + "</font>\n";
+//            hasChanges = true;
+//        }
+//    }
+
+    // 检查移除设备
+    QString ts=QDateTime::currentDateTime().toString("[hh:mm:ss] ");
+    for (const QString &device : previousDeviceLog) {
+        if (!currentDeviceList.contains(device)) {
+            changesText += "<font color='red'>["+ts+"移除]" + device +"<br>"+"</font>";
+            hasChanges = true;
+        }
+    }
+
+    // 如果有变化，发送到设备信息窗口
+    if (hasChanges && deviceInfoEdit) {
+        // 先清空设备实时信息列表
+        emit clearDeviceInfo();  // 发送清除信号
+
+        // 添加时间戳和变化信息
+        QString timestamp = QDateTime::currentDateTime().toString("[hh:mm:ss] ");
+        deviceInfoEdit->append("<font color='blue'>"+timestamp + "设备状态变化检测:</font>");
+        deviceInfoEdit->append("<font color='blue'>=========================</font>");
+        deviceInfoEdit->append(changesText);
+        deviceInfoEdit->append("<font color='blue'>=========================</font>");
+
+        emit deviceChanged("<font color='blue'>检测到设备变化</font>");
+    } else if (deviceInfoEdit) {
+        // 如果没有变化，可以显示无变化信息
+        deviceInfoEdit->clear();
+        deviceInfoEdit->append("<font color='blue'>"+QDateTime::currentDateTime().toString("[hh:mm:ss] ") + "设备状态无变化</font>");
+    }
+}
+
 void DeviceManager::startDetection()
 {
     if (isMonitoring) return;
 
     isMonitoring = true;
 
+    // 清空当前设备列表
+    currentDeviceList.clear();
+
     // 设置文件系统监控
     fileWatcher->addPath("/dev/input");
     fileWatcher->addPath("/dev/bus/usb");
     fileWatcher->addPath("/sys/class/drm");
 
+    // 清空设备信息显示
+    if (deviceInfoEdit) {
+        deviceInfoEdit->clear();
+    }
+
     // 初始设备扫描
     checkDevices();
-    //将设备信息保存到log文件中
-    bool isFirstWrite = true;
-    QString result = "\n] 设备扫描结果:\n";
-    for (const QString &device : deviceList) {
-        // 保存到设备文件
-        QFile file(logFilePath);
 
-        //判断文件目录是否存在
-        QFileInfo fileInfo(logFilePath);
-        QDir logDir = fileInfo.absoluteDir();
-        if (!logDir.exists()) {
-            qDebug() << "创建日志目录:" << logDir.absolutePath();
-                if (!logDir.mkpath(".")) {
-                    qWarning() << "无法创建日志目录:" << logDir.absolutePath();
-                    return;
-                   }
-                }
-                if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-                    QTextStream out(&file);
-                    // 如果是第一次写入，添加时间和说明
-                    if (isFirstWrite) {
-                        out << "[" << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
-                        << result.toUtf8();//解决log文件下中文乱码问题
-                        isFirstWrite = false;
-                     }
-                        out << device;
-                        file.close();
-                    }
-            }
-    deviceList.
+    // 保存初始设备日志（覆盖）
+    saveDeviceLog();
+
+    // 与上次日志比较（用于开机重启后的首次检测）
+    compareAndNotify();
 
     // 启动定时器，每2秒检查一次
     detectionTimer->start(2000);
@@ -120,11 +205,18 @@ void DeviceManager::stopDetection()
 
 void DeviceManager::performQuickScan()
 {
-    // 发送清除信号（如果需要）
+    // 清空设备信息显示
+    if (deviceInfoEdit) {
+        deviceInfoEdit->clear();
+    }
+
     emit deviceChanged("=== 快速设备扫描开始 ===");
     emit deviceChanged("扫描时间: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
 
-    // 清除设备状态缓存，强制重新检测所有设备
+    // 清空当前设备列表
+    currentDeviceList.clear();
+
+    // 清除设备状态缓存
     previousUsbDevices.clear();
     previousInputDevices.clear();
     previousDisplayInfo.clear();
@@ -135,65 +227,75 @@ void DeviceManager::performQuickScan()
     checkPciDevices();
     checkNetworkDevices();
 
+    // 保存并比较
+    saveDeviceLog();
+    compareAndNotify();
+
     emit deviceChanged("=== 快速设备扫描结束 ===");
     emit logMessage("执行快速设备扫描");
 }
 
+// 注意：这里需要确保槽函数有正确的实现
 void DeviceManager::checkDevices()
 {
+    // 清空当前设备列表
+    currentDeviceList.clear();
+
     checkUsbDevices();
     checkInputDevices();
     checkDisplayDevices();
     checkPciDevices();
     checkNetworkDevices();
+
+    // 每次检查后都与上次保存的日志比较
+    compareAndNotify();
 }
 
+// 这里添加缺失的槽函数实现
 void DeviceManager::onUsbDeviceChanged()
 {
+    // 当USB设备目录变化时触发
     checkUsbDevices();
+    compareAndNotify();
 }
 
 void DeviceManager::onInputDeviceChanged()
 {
+    // 当输入设备目录变化时触发
     checkInputDevices();
+    compareAndNotify();
 }
 
 void DeviceManager::onDisplayChanged()
 {
+    // 当显示设备目录变化时触发
     checkDisplayDevices();
+    compareAndNotify();
 }
 
 void DeviceManager::checkUsbDevices()
 {
     QSet<QString> currentUsbDevices;
 
-    // 使用 lsusb 命令检查 USB 设备
+    // 在设备列表中添加USB设备标题
+    currentDeviceList.append("=== USB设备 ===");
+
     QProcess lsusbProcess;
     lsusbProcess.start("lsusb");
     if (lsusbProcess.waitForFinished(1000)) {
         QString output = lsusbProcess.readAllStandardOutput();
-
-        // 修复：使用兼容的方式分割字符串
         QStringList lines = output.split('\n');
 
-        deviceList.append("USB设备：\n");
-        QStringList nonEmptyLines;
         for (const QString &line : lines) {
             if (!line.trimmed().isEmpty()) {
-                nonEmptyLines.append(line);
+                QString deviceInfo = line.trimmed();
+                currentUsbDevices.insert(deviceInfo);
+                currentDeviceList.append(deviceInfo);
 
-                //插入到总的设备集合中，作为监控设备掉没掉的依据
-                deviceList.append(line+"\n");
-            }
-        }
-
-        for (const QString &line : nonEmptyLines) {
-            QString deviceInfo = line.trimmed();
-            currentUsbDevices.insert(deviceInfo);
-
-            if (!previousUsbDevices.contains(deviceInfo)) {
-                emit usbDeviceChanged("add", deviceInfo);
-                emit deviceChanged("USB设备插入: " + deviceInfo);
+                if (!previousUsbDevices.contains(deviceInfo)) {
+                    emit usbDeviceChanged("add", deviceInfo);
+                    emit deviceChanged("USB设备插入: " + deviceInfo);
+                }
             }
         }
 
@@ -216,16 +318,16 @@ void DeviceManager::checkInputDevices()
 
     QStringList inputFiles = inputDir.entryList(QStringList() << "event*", QDir::System);
 
-    deviceList.append("输入设备:\n");
+    // 在设备列表中添加输入设备标题
+    currentDeviceList.append("=== 输入设备 ===");
+
     for (const QString &inputFile : inputFiles) {
         QString devicePath = inputDir.absoluteFilePath(inputFile);
         QString deviceInfo = getInputDeviceInfo(devicePath);
 
         if (!deviceInfo.isEmpty()) {
             currentInputDevices.insert(devicePath);
-
-            //追加到总的设备集合中，作为监控设备掉没掉的依据
-            deviceList.append(deviceInfo+"\n");
+            currentDeviceList.append(deviceInfo);
 
             if (!previousInputDevices.contains(devicePath)) {
                 emit inputDeviceChanged("add", deviceInfo);
@@ -250,9 +352,9 @@ void DeviceManager::checkDisplayDevices()
 {
     QString currentDisplayInfo = getDisplayInfo();
 
-    //追加到总的设备集合中，作为监控设备掉没掉的依据
-    deviceList.append("显示设备:\n");
-    deviceList.append(currentDisplayInfo+"\n");
+    // 在设备列表中添加显示设备标题和信息
+    currentDeviceList.append("=== 显示设备 ===");
+    currentDeviceList.append(currentDisplayInfo);
 
     if (currentDisplayInfo != previousDisplayInfo) {
         if (!previousDisplayInfo.isEmpty()) {
@@ -270,26 +372,15 @@ void DeviceManager::checkPciDevices()
 
     if (pciProcess.waitForFinished(1000)) {
         QString output = pciProcess.readAllStandardOutput();
-
-        // 修复：使用兼容的方式分割字符串
         QStringList lines = output.split('\n');
 
-        deviceList.append("PCI设备列表：\n");
-        QStringList nonEmptyLines;
+        // 在设备列表中添加PCI设备标题
+        currentDeviceList.append("=== PCI设备 ===");
+
         for (const QString &line : lines) {
             if (!line.trimmed().isEmpty()) {
-                nonEmptyLines.append(line);
-            }
-        }
-
-        emit deviceChanged("PCI设备列表:");
-        for (const QString &device : nonEmptyLines) {
-            if (device.contains("VGA") || device.contains("Display") ||
-                device.contains("USB") || device.contains("Network")) {
-                //放到device集合中，作为日志文件
-                deviceList.append(device.trimmed()+"\n");
-
-                emit deviceChanged("  " + device.trimmed());
+                currentDeviceList.append(line.trimmed());
+                emit deviceChanged("PCI设备: " + line.trimmed());
             }
         }
     }
@@ -302,25 +393,15 @@ void DeviceManager::checkNetworkDevices()
 
     if (ipProcess.waitForFinished(1000)) {
         QString output = ipProcess.readAllStandardOutput();
-
-        // 修复：使用兼容的方式分割字符串
         QStringList lines = output.split('\n');
-        QStringList nonEmptyLines;
 
-        deviceList.append("网络设备列表:\n");
+        // 在设备列表中添加网络设备标题
+        currentDeviceList.append("=== 网络设备 ===");
+
         for (const QString &line : lines) {
             if (!line.trimmed().isEmpty()) {
-                nonEmptyLines.append(line);
-
-                //放到device集合中，作为日志文件
-                deviceList.append(line.trimmed()+"\n");
-            }
-        }
-
-        emit deviceChanged("网络设备列表:");
-        for (const QString &line : nonEmptyLines) {
-            if (line.contains("state UP") || line.contains("state DOWN")) {
-                emit deviceChanged("  " + line.trimmed());
+                currentDeviceList.append(line.trimmed());
+                emit deviceChanged("网络设备: " + line.trimmed());
             }
         }
     }
@@ -373,17 +454,9 @@ QString DeviceManager::getDisplayInfo()
     if (xrandrProcess.waitForFinished(1000)) {
         QString output = xrandrProcess.readAllStandardOutput();
 
-        // 修复：使用兼容的方式分割字符串
         QStringList lines = output.split('\n');
-        QStringList nonEmptyLines;
         for (const QString &line : lines) {
-            if (!line.trimmed().isEmpty()) {
-                nonEmptyLines.append(line);
-            }
-        }
-
-        for (const QString &line : nonEmptyLines) {
-            if (line.contains(" connected")) {
+            if (!line.trimmed().isEmpty() && line.contains(" connected")) {
                 displayInfo += "[" + line.trimmed() + "] ";
             }
         }

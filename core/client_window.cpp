@@ -530,6 +530,8 @@ void ClientWindow::connectModules()
     connect(systemMonitor, &SystemMonitor::logMessage, logger, &Logger::addMessage);
     connect(deviceManager, &DeviceManager::logMessage, logger, &Logger::addMessage);
     connect(deviceManager, &DeviceManager::logMessage, logger, &Logger::addMessage);
+    //清除设备列表
+    connect(deviceManager, &DeviceManager::clearDeviceInfo, this, &ClientWindow::clearDeviceInfoDisplay);
 
     // 关键修复：连接开机启动状态变化信号
     connect(autoStartManager, &AutoStartManager::autoStartStatusChanged,
@@ -650,51 +652,65 @@ void ClientWindow::closeEvent(QCloseEvent *event)
 // 设备相关槽函数
 void ClientWindow::onDeviceChanged(const QString &message)
 {
-    deviceInfoEdit->append(message);
+//    deviceInfoEdit->append(message);
 
-    QTextCursor cursor = deviceInfoEdit->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    deviceInfoEdit->setTextCursor(cursor);
+//    QTextCursor cursor = deviceInfoEdit->textCursor();
+//    cursor.movePosition(QTextCursor::End);
+//    deviceInfoEdit->setTextCursor(cursor);
 }
 
 void ClientWindow::onUsbDeviceChanged(const QString &action, const QString &deviceInfo)
 {
-    QString message;
-    if (action == "add") {
-        message = QString("🎯 USB设备插入: %1").arg(deviceInfo);
-        deviceInfoEdit->append("<font color='green'>" + message + "</font>");
-    } else if (action == "remove") {
-        message = QString("🚫 USB设备移除: %1").arg(deviceInfo);
-        deviceInfoEdit->append("<font color='red'>" + message + "</font>");
-    }
+//    QString message;
+//    if (action == "add") {
+//        message = QString("🎯 USB设备插入: %1").arg(deviceInfo);
+//        deviceInfoEdit->append("<font color='green'>" + message + "</font>");
+//    } else if (action == "remove") {
+//        message = QString("🚫 USB设备移除: %1").arg(deviceInfo);
+//        deviceInfoEdit->append("<font color='red'>" + message + "</font>");
+//    }
 
-    QTextCursor cursor = deviceInfoEdit->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    deviceInfoEdit->setTextCursor(cursor);
+//    QTextCursor cursor = deviceInfoEdit->textCursor();
+//    cursor.movePosition(QTextCursor::End);
+//    deviceInfoEdit->setTextCursor(cursor);
 }
 
 void ClientWindow::onInputDeviceChanged(const QString &action, const QString &deviceInfo)
 {
-    QString message;
-    if (action == "add") {
-        message = QString("🖱️  输入设备插入: %1").arg(deviceInfo);
-        deviceInfoEdit->append("<font color='green'>" + message + "</font>");
-    } else if (action == "remove") {
-        message = QString("⌨️  输入设备移除: %1").arg(deviceInfo);
-        deviceInfoEdit->append("<font color='red'>" + message + "</font>");
-    }
+//    QString message;
+//    if (action == "add") {
+//        message = QString("🖱️  输入设备插入: %1").arg(deviceInfo);
+//        deviceInfoEdit->append("<font color='green'>" + message + "</font>");
+//    } else if (action == "remove") {
+//        message = QString("⌨️  输入设备移除: %1").arg(deviceInfo);
+//        deviceInfoEdit->append("<font color='red'>" + message + "</font>");
+//    }
 
-    QTextCursor cursor = deviceInfoEdit->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    deviceInfoEdit->setTextCursor(cursor);
+//    QTextCursor cursor = deviceInfoEdit->textCursor();
+//    cursor.movePosition(QTextCursor::End);
+//    deviceInfoEdit->setTextCursor(cursor);
 }
 
 void ClientWindow::onDisplayChanged(const QString &action, const QString &displayInfo)
 {
-    QString message = QString("🖥️  显示设备%1: %2").arg(action).arg(displayInfo);
-    deviceInfoEdit->append("<font color='blue'>" + message + "</font>");
+//    QString message = QString("🖥️  显示设备%1: %2").arg(action).arg(displayInfo);
+//    deviceInfoEdit->append("<font color='blue'>" + message + "</font>");
 
-    QTextCursor cursor = deviceInfoEdit->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    deviceInfoEdit->setTextCursor(cursor);
+//    QTextCursor cursor = deviceInfoEdit->textCursor();
+//    cursor.movePosition(QTextCursor::End);
+//    deviceInfoEdit->setTextCursor(cursor);
+}
+
+// 清空设备实时信息窗口
+void ClientWindow::clearDeviceInfoDisplay()
+{
+    if (deviceInfoEdit) {
+        deviceInfoEdit->clear();  // 清空设备实时信息窗口
+
+        // 可以添加一个状态提示
+        QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        deviceInfoEdit->append(QString("<font color='gray'>设备信息已更新于 %1</font>").arg(timestamp));
+
+        qDebug() << "设备实时信息列表已清空";
+    }
 }

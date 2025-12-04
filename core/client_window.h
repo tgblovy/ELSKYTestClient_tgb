@@ -41,6 +41,7 @@ private slots:
     void onDisplayChanged(const QString &action, const QString &displayInfo);
     void toggleAlwaysOnTop(bool on);
     void onCycleCompleted(); // 新增完成提示槽函数
+    void clearDeviceInfoDisplay();  // 新增：清除设备信息显示
 
 private:
     void setupUI();

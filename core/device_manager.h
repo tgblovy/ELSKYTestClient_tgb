@@ -7,7 +7,8 @@
 #include <QTimer>
 #include <QFileSystemWatcher>
 #include <QSet>
-#include <QString>  // 确保包含QString
+#include <QString>
+#include <QList>
 
 class DeviceManager : public QObject
 {
@@ -21,6 +22,7 @@ public:
     void startDetection();
     void stopDetection();
     void performQuickScan();
+    void loadPreviousDeviceLog();
 
 signals:
     void deviceChanged(const QString &message);
@@ -28,6 +30,7 @@ signals:
     void inputDeviceChanged(const QString &action, const QString &deviceInfo);
     void displayChanged(const QString &action, const QString &displayInfo);
     void logMessage(const QString &message);
+    void clearDeviceInfo();  // 新增：清除设备信息信号
 
 private slots:
     void checkDevices();
@@ -46,6 +49,9 @@ private:
     QString getInputDeviceInfo(const QString &devicePath);
     QString getDisplayInfo();
 
+    void saveDeviceLog();
+    void compareAndNotify();
+
     QTimer *detectionTimer;
     QFileSystemWatcher *fileWatcher;
     QPushButton *detectButton;
@@ -55,6 +61,11 @@ private:
     QSet<QString> previousUsbDevices;
     QSet<QString> previousInputDevices;
     QString previousDisplayInfo;
+
+    // 当前设备信息
+    QList<QString> currentDeviceList;
+    // 上次保存的设备日志
+    QList<QString> previousDeviceLog;
 
     bool isMonitoring;
 };
