@@ -60,12 +60,11 @@ ClientWindow::ClientWindow(QWidget *parent)
     setupFunctionModules();
     connectModules();
     setupWindowProperties();
-
     QTimer::singleShot(1000, this, [this]() {
         if (systemMonitor) {
             systemMonitor->startMonitoring();
         }
-    });
+    }); 
 }
 
 ClientWindow::~ClientWindow()
@@ -607,6 +606,9 @@ void ClientWindow::showEvent(QShowEvent *event)
         show();
         activateWindow();
         raise();
+
+        //利用延时器窗体打开后0.5s开始设备监控
+        QTimer::singleShot(500,deviceManager,&DeviceManager::startDetection);
 
         // 确保分割器对半分
         QSplitter *splitter = findChild<QSplitter*>();

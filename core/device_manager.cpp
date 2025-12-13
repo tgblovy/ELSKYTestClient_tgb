@@ -13,6 +13,7 @@
 // 全局变量定义
 QString homeDir = QDir::homePath();
 QString logFilePath = homeDir + "/.monitor_log/device.log";
+QString deviceChangeLogFilePath = homeDir + "/.monitor_log/deviceChange.log";  // 新增
 
 DeviceManager::DeviceManager(QObject *parent)
     : QObject(parent)
@@ -97,9 +98,40 @@ void DeviceManager::saveDeviceLog()
         // 保存后更新上一次的日志记录
         previousDeviceLog = currentDeviceList;
 
+        // logDeviceChange在设备变化日志中添加分隔符，标记一次完整的扫描
+        logDeviceChange("=== 设备扫描完成 ===",
+                       QString("扫描时间: %1, 发现设备: %2 个")
+                       .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"))
+                       .arg(currentDeviceList.count()));
+
         emit logMessage("设备日志已保存到: " + logFilePath);
     } else {
         qWarning() << "无法打开日志文件:" << logFilePath;
+    }
+}
+
+// 新增：记录设备变化到 deviceChange.log
+void DeviceManager::logDeviceChange(const QString &changeType, const QString &deviceInfo)
+{
+    // 确保日志目录存在
+    QFileInfo fileInfo(deviceChangeLogFilePath);
+    QDir logDir = fileInfo.absoluteDir();
+    if (!logDir.exists()) {
+        if (!logDir.mkpath(".")) {
+            qWarning() << "无法创建设备变化日志目录:" << logDir.absolutePath();
+            return;
+        }
+    }
+
+    // 追加写入设备变化日志
+    QFile file(deviceChangeLogFilePath);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        QTextStream out(&file);
+        QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        out << "[" << timestamp << "] " << changeType << ": " << deviceInfo << "\n";
+        file.close();
+    } else {
+        qWarning() << "无法打开设备变化日志文件:" << deviceChangeLogFilePath;
     }
 }
 
@@ -110,12 +142,14 @@ void DeviceManager::compareAndNotify()
     QString changesText;
 
     // 检查新增设备
-//    for (const QString &device : currentDeviceList) {
-//        if (!previousDeviceLog.contains(device)) {
+    for (const QString &device : currentDeviceList) {
+        if (!previousDeviceLog.contains(device)) {
 //            changesText += "<font color='green'>[新增] " + device + "</font>\n";
-//            hasChanges = true;
-//        }
-//    }
+            hasChanges = true;
+            // 记录到设备变化日志
+//            logDeviceChange("新增设备", device);
+        }
+    }
 
     // 检查移除设备
     QString ts=QDateTime::currentDateTime().toString("[hh:mm:ss] ");
@@ -123,9 +157,11 @@ void DeviceManager::compareAndNotify()
         if (!currentDeviceList.contains(device)) {
             changesText += "<font color='red'>["+ts+"移除]" + device +"<br>"+"</font>";
             hasChanges = true;
+
+            // 记录到设备变化日志
+            logDeviceChange("移除设备", device);
         }
     }
-
     // 如果有变化，发送到设备信息窗口
     if (hasChanges && deviceInfoEdit) {
         // 先清空设备实时信息列表
@@ -154,6 +190,8 @@ void DeviceManager::startDetection()
 
     // 清空当前设备列表
     currentDeviceList.clear();
+    //清空指定行数的设备变化日志
+    cleanupOldDeviceChangeLogs(5000);
 
     // 设置文件系统监控
     fileWatcher->addPath("/dev/input");
@@ -174,8 +212,8 @@ void DeviceManager::startDetection()
     // 与上次日志比较（用于开机重启后的首次检测）
     compareAndNotify();
 
-    // 启动定时器，每2秒检查一次
-    detectionTimer->start(2000);
+    // 启动定时器，每5秒检查一次
+    detectionTimer->start(10000);
 
     if (detectButton) {
         detectButton->setText("停止检测");
@@ -463,4 +501,37 @@ QString DeviceManager::getDisplayInfo()
     }
 
     return displayInfo.isEmpty() ? "未检测到显示器" : displayInfo;
+}
+
+// 避免 deviceChange.log 文件过大
+void DeviceManager::cleanupOldDeviceChangeLogs(const int &maxLines)
+{
+    QFile file(deviceChangeLogFilePath);
+    if (!file.exists() || file.size() < 10 * 1024 * 1024) { // 小于10MB不清理
+        return;
+    }
+
+    QStringList lines;
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&file);
+        while (!in.atEnd()) {
+            lines.append(in.readLine());
+        }
+        file.close();
+    }
+
+    // 保留最近 maxLines 行
+    if (lines.size() > maxLines) {
+        lines = lines.mid(lines.size() - maxLines);
+
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+            QTextStream out(&file);
+            for (const QString &line : lines) {
+                out << line << "\n";
+            }
+            file.close();
+
+            emit logMessage(QString("设备变化日志已清理，保留最近 %1 行").arg(maxLines));
+        }
+    }
 }

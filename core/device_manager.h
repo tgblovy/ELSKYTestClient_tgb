@@ -51,6 +51,8 @@ private:
 
     void saveDeviceLog();
     void compareAndNotify();
+    void logDeviceChange(const QString &changeType, const QString &deviceInfo);
+    void cleanupOldDeviceChangeLogs(const int &maxLines);
 
     QTimer *detectionTimer;
     QFileSystemWatcher *fileWatcher;
