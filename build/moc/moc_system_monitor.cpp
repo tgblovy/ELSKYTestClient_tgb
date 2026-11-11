@@ -1,107 +1,91 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'system_monitor.h'
 **
-** Created by: The Qt Meta Object Compiler version 67 (Qt 5.12.12)
+** Created by: The Qt Meta Object Compiler version 69 (Qt 6.11.1)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
 #include "../../core/system_monitor.h"
-#include <QtCore/qbytearray.h>
+#include <QtGui/qtextcursor.h>
 #include <QtCore/qmetatype.h>
+
+#include <QtCore/qtmochelpers.h>
+
+#include <memory>
+
+
+#include <QtCore/qxptype_traits.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
 #error "The header file 'system_monitor.h' doesn't include <QObject>."
-#elif Q_MOC_OUTPUT_REVISION != 67
-#error "This file was generated using the moc from 5.12.12. It"
+#elif Q_MOC_OUTPUT_REVISION != 69
+#error "This file was generated using the moc from 6.11.1. It"
 #error "cannot be used with the include files from this version of Qt."
 #error "(The moc has changed too much.)"
 #endif
 
-QT_BEGIN_MOC_NAMESPACE
+#ifndef Q_CONSTINIT
+#define Q_CONSTINIT
+#endif
+
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
-struct qt_meta_stringdata_SystemMonitor_t {
-    QByteArrayData data[5];
-    char stringdata0[54];
-};
-#define QT_MOC_LITERAL(idx, ofs, len) \
-    Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
-    qptrdiff(offsetof(qt_meta_stringdata_SystemMonitor_t, stringdata0) + ofs \
-        - idx * sizeof(QByteArrayData)) \
-    )
-static const qt_meta_stringdata_SystemMonitor_t qt_meta_stringdata_SystemMonitor = {
-    {
-QT_MOC_LITERAL(0, 0, 13), // "SystemMonitor"
-QT_MOC_LITERAL(1, 14, 10), // "logMessage"
-QT_MOC_LITERAL(2, 25, 0), // ""
-QT_MOC_LITERAL(3, 26, 7), // "message"
-QT_MOC_LITERAL(4, 34, 19) // "updateSystemMonitor"
+QT_WARNING_DISABLE_GCC("-Wuseless-cast")
+namespace {
+struct qt_meta_tag_ZN13SystemMonitorE_t {};
+} // unnamed namespace
 
-    },
-    "SystemMonitor\0logMessage\0\0message\0"
-    "updateSystemMonitor"
-};
-#undef QT_MOC_LITERAL
-
-static const uint qt_meta_data_SystemMonitor[] = {
-
- // content:
-       8,       // revision
-       0,       // classname
-       0,    0, // classinfo
-       2,   14, // methods
-       0,    0, // properties
-       0,    0, // enums/sets
-       0,    0, // constructors
-       0,       // flags
-       1,       // signalCount
-
- // signals: name, argc, parameters, tag, flags
-       1,    1,   24,    2, 0x06 /* Public */,
-
- // slots: name, argc, parameters, tag, flags
-       4,    0,   27,    2, 0x08 /* Private */,
-
- // signals: parameters
-    QMetaType::Void, QMetaType::QString,    3,
-
- // slots: parameters
-    QMetaType::Void,
-
-       0        // eod
-};
-
-void SystemMonitor::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+template <> constexpr inline auto SystemMonitor::qt_create_metaobjectdata<qt_meta_tag_ZN13SystemMonitorE_t>()
 {
-    if (_c == QMetaObject::InvokeMetaMethod) {
-        auto *_t = static_cast<SystemMonitor *>(_o);
-        Q_UNUSED(_t)
-        switch (_id) {
-        case 0: _t->logMessage((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 1: _t->updateSystemMonitor(); break;
-        default: ;
-        }
-    } else if (_c == QMetaObject::IndexOfMethod) {
-        int *result = reinterpret_cast<int *>(_a[0]);
-        {
-            using _t = void (SystemMonitor::*)(const QString & );
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&SystemMonitor::logMessage)) {
-                *result = 0;
-                return;
-            }
-        }
-    }
-}
+    namespace QMC = QtMocConstants;
+    QtMocHelpers::StringRefStorage qt_stringData {
+        "SystemMonitor",
+        "logMessage",
+        "",
+        "message",
+        "updateSystemMonitor"
+    };
 
-QT_INIT_METAOBJECT const QMetaObject SystemMonitor::staticMetaObject = { {
-    &QObject::staticMetaObject,
-    qt_meta_stringdata_SystemMonitor.data,
-    qt_meta_data_SystemMonitor,
+    QtMocHelpers::UintData qt_methods {
+        // Signal 'logMessage'
+        QtMocHelpers::SignalData<void(const QString &)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::QString, 3 },
+        }}),
+        // Slot 'updateSystemMonitor'
+        QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
+    };
+    QtMocHelpers::UintData qt_properties {
+    };
+    QtMocHelpers::UintData qt_enums {
+    };
+    return QtMocHelpers::metaObjectData<SystemMonitor, qt_meta_tag_ZN13SystemMonitorE_t>(QMC::MetaObjectFlag{}, qt_stringData,
+            qt_methods, qt_properties, qt_enums);
+}
+Q_CONSTINIT const QMetaObject SystemMonitor::staticMetaObject = { {
+    QMetaObject::SuperData::link<QObject::staticMetaObject>(),
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN13SystemMonitorE_t>.stringdata,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN13SystemMonitorE_t>.data,
     qt_static_metacall,
     nullptr,
+    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN13SystemMonitorE_t>.metaTypes,
     nullptr
 } };
 
+void SystemMonitor::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    auto *_t = static_cast<SystemMonitor *>(_o);
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        switch (_id) {
+        case 0: _t->logMessage((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 1: _t->updateSystemMonitor(); break;
+        default: ;
+        }
+    }
+    if (_c == QMetaObject::IndexOfMethod) {
+        if (QtMocHelpers::indexOfMethod<void (SystemMonitor::*)(const QString & )>(_a, &SystemMonitor::logMessage, 0))
+            return;
+    }
+}
 
 const QMetaObject *SystemMonitor::metaObject() const
 {
@@ -111,7 +95,7 @@ const QMetaObject *SystemMonitor::metaObject() const
 void *SystemMonitor::qt_metacast(const char *_clname)
 {
     if (!_clname) return nullptr;
-    if (!strcmp(_clname, qt_meta_stringdata_SystemMonitor.stringdata0))
+    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN13SystemMonitorE_t>.strings))
         return static_cast<void*>(this);
     return QObject::qt_metacast(_clname);
 }
@@ -125,9 +109,10 @@ int SystemMonitor::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         if (_id < 2)
             qt_static_metacall(this, _c, _id, _a);
         _id -= 2;
-    } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+    }
+    if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
         if (_id < 2)
-            *reinterpret_cast<int*>(_a[0]) = -1;
+            *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
         _id -= 2;
     }
     return _id;
@@ -136,8 +121,6 @@ int SystemMonitor::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 // SIGNAL 0
 void SystemMonitor::logMessage(const QString & _t1)
 {
-    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
-    QMetaObject::activate(this, &staticMetaObject, 0, _a);
+    QMetaObject::activate<void>(this, &staticMetaObject, 0, nullptr, _t1);
 }
 QT_WARNING_POP
-QT_END_MOC_NAMESPACE

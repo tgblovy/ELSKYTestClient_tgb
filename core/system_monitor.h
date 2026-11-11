@@ -38,7 +38,9 @@ private:
     int getCpuFanSpeed();
     double getCpuUsage();
     double getMemoryUsage();
-    double getGpuMemoryUsage();
+    // 显存真实检测并刷新 UI(nvidia-smi → DRM sysfs vram → DRM sysfs gtt;
+    // 与老化工具 aging_test_gui.py 同源同层级,检测不到时显示"未检测到")
+    void updateGpuMemoryUI();
     QDateTime getLastBootTime();
     qint64 getSystemUptime();
     QString formatUptime(qint64 seconds);

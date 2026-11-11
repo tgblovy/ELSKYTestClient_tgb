@@ -1,0 +1,14 @@
+cd /home/KC7000/server
+make distclean
+rm -rf moc* obj* *.o
+qmake
+make
+
+
+统信系统自带有qt5环境，可以临时手动修改路径
+export QTDIR=/usr/lib/aarch64-linux-gnu/qt5  # 或 qt4 的正确路径
+export PATH=$QTDIR/bin:$PATH
+
+安装qt4
+sudo apt-get update
+sudo apt-get install qt4-default

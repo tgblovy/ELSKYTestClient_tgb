@@ -11,7 +11,12 @@ APP_NAME=""
 
 if [ "$ARCH" = "aarch64" ]; then
     echo "✓ 检测到飞腾ARM64平台"
+    # 修复（A4）：兼容 D2000/D3000 细分型号产物 _ft2000/_ft3000 ——
+    # 先找精确名 _ft，找不到再通配 _ft*
     APP_NAME="ELSKY_test_client_ft"
+    if [ ! -f "$SCRIPT_DIR/$APP_NAME" ]; then
+        APP_NAME=$(ls "$SCRIPT_DIR"/ELSKY_test_client_ft* 2>/dev/null | head -1 | xargs -r basename 2>/dev/null)
+    fi
 elif [[ "$ARCH" =~ "x86_64" ]]; then
     echo "✓ 检测到X86_64平台"
     APP_NAME="ELSKY_test_client_x86"

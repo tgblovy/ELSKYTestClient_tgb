@@ -25,11 +25,13 @@ CycleController::CycleController(QObject *parent)
     , countSpin(nullptr)
     , autoStartManager(nullptr)
     , isCycleRunning(false)
+    , isCyclePaused(false)
     , currentCycleCount(0)
     , countdownSeconds(0)
     , shouldAutoStartCycle(false)
     , isFirstStartAfterReboot(false)
     , isRestoringCycle(false)
+    , cycleStartTime(QDateTime::currentDateTime())  // 初始化为当前时间
 {
     cycleTimer = new QTimer(this);
     connect(cycleTimer, &QTimer::timeout, this, &CycleController::onCycleTimer);
@@ -73,13 +75,13 @@ void CycleController::setupUI(QPushButton *toggleBtn, QLabel *statusLbl,
 
     if (intervalSpin) {
         intervalSpin->setRange(10, 86400);
-        intervalSpin->setValue(60);
+        intervalSpin->setValue(40);
         intervalSpin->setSuffix("秒");
     }
 
     if (countSpin) {
         countSpin->setRange(1, 9999);
-        countSpin->setValue(1);
+        countSpin->setValue(1000);
         countSpin->setSuffix("次");
     }
 
@@ -115,6 +117,10 @@ void CycleController::startCycleWithConfig(CycleOperation operation, int interva
 
     isCycleRunning = true;
     shouldAutoStartCycle = true;
+    cycleStartTime = QDateTime::currentDateTime();  // 记录循环开始时间
+
+    // 发射循环运行状态变化信号（用于保护服务管理操作）
+    emit cycleRunningChanged(true);
 
     // 启动定时器
     countdownTimer->start(1000);
@@ -170,8 +176,14 @@ void CycleController::stopCycle()
     // 更新状态变量
     bool wasRunning = isCycleRunning;
     isCycleRunning = false;
+    isCyclePaused = false;
     shouldAutoStartCycle = false;
     isFirstStartAfterReboot = false;
+
+    // 发射循环运行状态变化信号（通知AutoStartManager退出静默模式）
+    if (wasRunning) {
+        emit cycleRunningChanged(false);
+    }
 
     // 只有在主动停止时才记录日志
     if (wasRunning) {
@@ -185,6 +197,76 @@ void CycleController::stopCycle()
         // 否则延迟清除状态
         QTimer::singleShot(1000, this, &CycleController::clearCycleState);
     }
+}
+
+void CycleController::pauseCycle()
+{
+    if (!isCycleRunning) return;
+
+    // 停止定时器
+    if (countdownTimer && countdownTimer->isActive()) {
+        countdownTimer->stop();
+    }
+    if (cycleTimer && cycleTimer->isActive()) {
+        cycleTimer->stop();
+    }
+
+    isCycleRunning = false;
+    isCyclePaused = true;
+
+    // 更新UI
+    if (toggleButton) {
+        toggleButton->setText("继续循环");
+        toggleButton->setStyleSheet("QPushButton { background-color: #FF9800; color: white; }");
+    }
+
+    if (statusLabel) {
+        QString operationName = getOperationName(currentCycleConfig.operation);
+        statusLabel->setText(QString("%1 - 已暂停 %2/%3次").arg(operationName).arg(currentCycleCount).arg(currentCycleConfig.cycleCount));
+        statusLabel->setStyleSheet("QLabel { color: #FF9800; font-size: 12px; }");
+    }
+
+    emit logMessage(QString("循环已暂停 - 已完成 %1/%2 次").arg(currentCycleCount).arg(currentCycleConfig.cycleCount));
+
+    // 保存暂停状态（不清除计数）
+    saveCycleState();
+}
+
+void CycleController::resumeCycle()
+{
+    if (!isCyclePaused) return;
+
+    // 检查是否还有剩余次数
+    if (currentCycleCount >= currentCycleConfig.cycleCount) {
+        emit logMessage("循环已完成所有次数，无法继续");
+        isCyclePaused = false;
+        if (toggleButton) {
+            toggleButton->setText("开始循环");
+            toggleButton->setStyleSheet("QPushButton { background-color: #9C27B0; color: white; }");
+        }
+        clearCycleState();
+        return;
+    }
+
+    isCyclePaused = false;
+    isCycleRunning = true;
+
+    // 重置倒计时
+    countdownSeconds = currentCycleConfig.intervalSeconds;
+
+    // 更新UI
+    if (toggleButton) {
+        toggleButton->setText("停止循环");
+        toggleButton->setStyleSheet("QPushButton { background-color: #f44336; color: white; }");
+    }
+
+    // 启动定时器
+    countdownTimer->start(1000);
+    updateCycleStatus();
+
+    emit logMessage(QString("循环已继续 - 从第 %1/%2 次开始").arg(currentCycleCount + 1).arg(currentCycleConfig.cycleCount));
+
+    saveCycleState();
 }
 
 void CycleController::restoreCycle()
@@ -207,7 +289,7 @@ void CycleController::saveState()
 
 void CycleController::onCycleToggle()
 {
-    if (!isCycleRunning) {
+    if (!isCycleRunning && !isCyclePaused) {
         // 启动循环 - 检查开机启动状态
         if (!isAutoStartEnabled()) {
             QMessageBox::warning(nullptr, "警告",
@@ -240,7 +322,7 @@ void CycleController::onCycleToggle()
         QLabel *intervalLabel = new QLabel("等待时间:", &dialog);
         QSpinBox *intervalSpin = new QSpinBox(&dialog);
         intervalSpin->setRange(10, 86400);
-        intervalSpin->setValue(60);
+        intervalSpin->setValue(40);
         intervalSpin->setSuffix("秒");
         intervalLayout->addWidget(intervalLabel);
         intervalLayout->addWidget(intervalSpin);
@@ -250,7 +332,7 @@ void CycleController::onCycleToggle()
         QLabel *countLabel = new QLabel("循环次数:", &dialog);
         QSpinBox *countSpin = new QSpinBox(&dialog);
         countSpin->setRange(1, 9999);
-        countSpin->setValue(1);
+        countSpin->setValue(1000);
         countSpin->setSuffix("次");
         countLayout->addWidget(countLabel);
         countLayout->addWidget(countSpin);
@@ -274,17 +356,23 @@ void CycleController::onCycleToggle()
             startCycleWithConfig(static_cast<CycleOperation>(opCombo->currentData().toInt()),
                                intervalSpin->value(), countSpin->value());
         }
+    } else if (isCyclePaused) {
+        // 暂停状态 → 继续
+        resumeCycle();
     } else {
-        // 停止循环 - 添加确认对话框
-        QMessageBox::StandardButton result = QMessageBox::question(
-            nullptr,
-            "确认停止",
-            "确定要停止当前循环任务吗？\n\n已完成 " + QString::number(currentCycleCount) + " 次操作",
-            QMessageBox::Yes | QMessageBox::No,
-            QMessageBox::No
-        );
+        // 运行状态 → 弹出选择：暂停 / 停止
+        QMessageBox msgBox;
+        msgBox.setWindowTitle("循环控制");
+        msgBox.setText(QString("当前循环进度: %1/%2 次\n\n请选择操作:").arg(currentCycleCount).arg(currentCycleConfig.cycleCount));
+        QPushButton *pauseBtn = msgBox.addButton("暂停", QMessageBox::ActionRole);
+        QPushButton *stopBtn = msgBox.addButton("停止", QMessageBox::DestructiveRole);
+        msgBox.addButton(QMessageBox::Cancel);
 
-        if (result == QMessageBox::Yes) {
+        msgBox.exec();
+
+        if (msgBox.clickedButton() == pauseBtn) {
+            pauseCycle();
+        } else if (msgBox.clickedButton() == stopBtn) {
             stopCycle();
         }
     }
@@ -292,9 +380,28 @@ void CycleController::onCycleToggle()
 
 void CycleController::handleAutoStartStatusChanged(bool enabled)
 {
+    // 记录详细的调用信息用于调试
+    emit logMessage(QString("[DEBUG] handleAutoStartStatusChanged 被调用: enabled=%1, isCycleRunning=%2")
+                   .arg(enabled ? "true" : "false")
+                   .arg(isCycleRunning ? "true" : "false"));
+
     if (!enabled && isCycleRunning) {
+        // 新增保护：检查程序运行时间（排除 WoL 唤醒等系统启动场景）
+        qint64 runningSeconds = cycleStartTime.secsTo(QDateTime::currentDateTime());
+
+        if (runningSeconds < 60) {
+            // 程序启动不到1分钟，很可能是 WoL/重启后的系统验证
+            // 不弹窗中断，仅记录警告
+            emit logMessage("⚠ 保护机制：程序刚启动(" + QString::number(runningSeconds) + "秒)，");
+            emit logMessage("  跳过开机启动状态变化检查以避免误中断循环任务");
+            emit logMessage("  （这可能是网络唤醒(WoL)后的正常现象）");
+
+            return;  // 直接返回，不中断循环
+        }
+
         emit logMessage("警告: 开机启动已被取消，但循环任务仍在运行");
         emit logMessage("系统重启后将无法自动恢复循环任务");
+        emit logMessage("循环已运行时间: " + QString::number(runningSeconds) + " 秒");
 
         // 询问用户是否停止循环
         QMessageBox::StandardButton result = QMessageBox::question(
@@ -309,6 +416,26 @@ void CycleController::handleAutoStartStatusChanged(bool enabled)
 
         if (result == QMessageBox::Yes) {
             stopCycle();
+        } else {
+            emit logMessage("用户选择继续运行循环任务（注意：重启后可能无法自动恢复）");
+        }
+    }
+}
+
+void CycleController::resetToggleButtonText()
+{
+    if (toggleButton) {
+        toggleButton->setText("开始循环");
+        toggleButton->setStyleSheet("QPushButton { background-color: #9C27B0; color: white; }");
+    }
+}
+
+void CycleController::updateStatusLabel(const QString& text, const QString& styleSheet)
+{
+    if (statusLabel) {
+        statusLabel->setText(text);
+        if (!styleSheet.isEmpty()) {
+            statusLabel->setStyleSheet(styleSheet);
         }
     }
 }
@@ -447,54 +574,89 @@ void CycleController::executeCycleOperation()
         QTimer::singleShot(3000, this, [this, operationName]() {
             emit logMessage("正在执行" + operationName + "操作...");
 
+            bool ok = false;
             if (currentCycleConfig.operation == CYCLE_SHUTDOWN) {
-                SystemController::shutdown();
+                ok = SystemController::shutdown();
             } else if (currentCycleConfig.operation == CYCLE_REBOOT) {
-                SystemController::reboot();
+                ok = SystemController::reboot();
+            }
+
+            // 命令失败兜底：明确提示并恢复状态，避免界面永远停在"正在准备..."（权限被拒时曾出现）
+            if (!ok) {
+                emit logMessage(QString("【错误】%1命令执行失败（无管理员权限或系统拒绝）。"
+                                        "请检查当前用户是否已配置 sudo 免密，或手动执行一次 sudo %2 验证。")
+                                .arg(operationName)
+                                .arg(currentCycleConfig.operation == CYCLE_SHUTDOWN ? "poweroff" : "reboot"));
+                if (statusLabel) {
+                    statusLabel->setText(QString("%1失败，可重试").arg(operationName));
+                    statusLabel->setStyleSheet("QLabel { color: #f44336; font-weight: bold; }");
+                }
             }
         });
     } else if (isSuspendOperation) {
-        // 关键修复：改进睡眠/休眠操作的处理
+        // 关键修复:改进睡眠/休眠操作的处理
         emit logMessage("正在执行" + operationName + "操作...");
 
         // 检查是否是最后一次操作
         bool isLastOperation = (currentCycleCount >= currentCycleConfig.cycleCount);
 
         if (isLastOperation) {
-            emit logMessage("这是最后一次" + operationName + "操作，完成后将显示完成提示");
+            emit logMessage("这是最后一次" + operationName + "操作,完成后将显示完成提示");
         }
 
+        // 停止本地 timer —— 我们**不应**在主进程里继续推进循环
+        // 因为机器马上要进入休眠,Qt 进程会被冻结,timer 排队
+        countdownTimer->stop();
+        cycleTimer->stop();
         QApplication::processEvents();
 
         // 执行睡眠/休眠操作
+        // 关键修复(飞腾 D2000/D3000 真机 bug):
+        //   旧实现直接调 SystemController::suspend() / hibernate() —— 代码中
+        //   **没有任何"休眠 N 秒后自动唤醒"机制**。"40 秒倒计时"实际是
+        //   "唤醒→下次休眠的间隔",**不是"休眠时长"**。
+        //   第一次休眠被外部源唤醒(BIOS 定时/手动按键)后,第二次进入 suspend
+        //   时外部源不再触发 → 永久卡在"系统休眠中"状态。
+        // 修复:循环场景必须用 suspendWithWake(N) / hibernateWithWake(N),
+        //       让 rtcwake 把"休眠 N 秒 + RTC 自唤醒"做成原子操作。
+        bool suspendOk = false;
         if (currentCycleConfig.operation == CYCLE_SUSPEND) {
-            SystemController::suspend();
+            // intervalSeconds 在循环语义下表示"休眠时长"(用户界面期望)
+            suspendOk = SystemController::suspendWithWake(currentCycleConfig.intervalSeconds);
         } else if (currentCycleConfig.operation == CYCLE_HIBERNATE) {
-            SystemController::hibernate();
+            suspendOk = SystemController::hibernateWithWake(currentCycleConfig.intervalSeconds);
         }
 
-        // 关键修复：改进恢复后的处理逻辑
-        QTimer::singleShot(3000, this, [this, isLastOperation, operationName]() {
-            emit logMessage("系统已从" + operationName + "状态恢复");
-
-            if (isCycleRunning) {
-                if (isLastOperation) {
-                    // 最后一次操作完成，停止循环
-                    emit logMessage("最后一次" + operationName + "操作已完成，停止循环");
-                    stopCycle();
-                    emit cycleCompleted();
-                } else {
-                    // 继续下一次循环
-                    emit logMessage("继续下一次循环");
-                    countdownSeconds = currentCycleConfig.intervalSeconds;
-                    countdownTimer->start(1000);
-                    updateCycleStatus();
-                    saveCycleState();
-                }
-            } else {
-                emit logMessage("循环已停止，不再继续");
+        if (!suspendOk) {
+            // 命令真的失败了(如 swap 未配置 / polkit 拒绝 / 硬件不支持休眠)
+            // 不能假装成功,也不能无限等待 —— 直接报错并恢复循环
+            emit logMessage(QString("【错误】%1命令执行失败(可能原因:swap 未配置、polkit 拒绝、或硬件不支持)。"
+                                    "请检查系统日志 /var/log/syslog 中的 suspend/hibernate 记录。")
+                            .arg(operationName));
+            if (statusLabel) {
+                statusLabel->setText(QString("%1失败,可重试").arg(operationName));
+                statusLabel->setStyleSheet(
+                    "QLabel { color: #f44336; font-weight: bold; }");
             }
-        });
+            // ---- 关键:不再"3 秒后假装恢复" ----
+            // 旧代码的 QTimer::singleShot(3000) 会在 3 秒后**无条件**
+            // 触发 "系统已恢复" + "继续下一次循环" —— 这就是用户看到的
+            // "倒计时还没结束就开始下一次循环"的根因!
+            // 现在改为:命令真的失败,UI 报错,什么都不做,等待用户手动处理
+            return;
+        }
+
+        // 命令成功 —— **不要做任何后续逻辑**
+        // 机器即将进入休眠,Qt 进程会被冻结,任何 singleShot / 状态变更
+        // 都会在唤醒后"乱序触发",造成"刚休眠就醒"的错觉
+        // 唤醒后的恢复逻辑在 mainwindow.cpp 的"程序启动时检测休眠唤醒"
+        // 路径中处理(读 QSettings 状态 / 重启 timer)
+        emit logMessage(QString("命令已发出,机器进入%1状态...").arg(operationName));
+        if (statusLabel) {
+            statusLabel->setText(QString("系统%1中...").arg(operationName));
+            statusLabel->setStyleSheet(
+                "QLabel { color: #ff9800; font-weight: bold; }");
+        }
     }
 }
 
@@ -540,6 +702,7 @@ void CycleController::saveCycleState()
     QSettings settings("ELSKY", "TestClient");
 
     settings.setValue("cycle/isRunning", isCycleRunning);
+    settings.setValue("cycle/isPaused", isCyclePaused);
     settings.setValue("cycle/currentCount", currentCycleCount);
     settings.setValue("cycle/countdownSeconds", countdownSeconds);
     settings.setValue("cycle/shouldAutoStartCycle", shouldAutoStartCycle && isAutoStartEnabled());
@@ -566,14 +729,15 @@ void CycleController::loadCycleState()
     QSettings settings("ELSKY", "TestClient");
 
     isCycleRunning = settings.value("cycle/isRunning", false).toBool();
+    isCyclePaused = settings.value("cycle/isPaused", false).toBool();
     currentCycleCount = settings.value("cycle/currentCount", 0).toInt();
     countdownSeconds = settings.value("cycle/countdownSeconds", 0).toInt();
     shouldAutoStartCycle = settings.value("cycle/shouldAutoStartCycle", false).toBool();
     isFirstStartAfterReboot = settings.value("cycle/isFirstStartAfterReboot", false).toBool();
 
     currentCycleConfig.operation = static_cast<CycleOperation>(settings.value("cycleConfig/operation", CYCLE_SHUTDOWN).toInt());
-    currentCycleConfig.intervalSeconds = settings.value("cycleConfig/intervalSeconds", 60).toInt();
-    currentCycleConfig.cycleCount = settings.value("cycleConfig/cycleCount", 1).toInt();
+    currentCycleConfig.intervalSeconds = settings.value("cycleConfig/intervalSeconds", 40).toInt();
+    currentCycleConfig.cycleCount = settings.value("cycleConfig/cycleCount", 1000).toInt();
     currentCycleConfig.enabled = settings.value("cycleConfig/enabled", false).toBool();
 
     // 关键修复：检查是否需要显示完成提示
@@ -606,7 +770,19 @@ void CycleController::loadCycleState()
                   .arg(shouldAutoStartCycle));
 
     // 关键修复：简化恢复逻辑，避免竞争条件
-    if (shouldAutoStartCycle && isCycleRunning && currentCycleCount < currentCycleConfig.cycleCount) {
+    if (isCyclePaused) {
+        // 暂停状态：恢复为暂停UI，等待用户手动继续
+        emit logMessage("检测到暂停中的循环任务，可点击继续恢复");
+        if (toggleButton) {
+            toggleButton->setText("继续循环");
+            toggleButton->setStyleSheet("QPushButton { background-color: #FF9800; color: white; }");
+        }
+        if (statusLabel) {
+            QString operationName = getOperationName(currentCycleConfig.operation);
+            statusLabel->setText(QString("%1 - 已暂停 %2/%3次").arg(operationName).arg(currentCycleCount).arg(currentCycleConfig.cycleCount));
+            statusLabel->setStyleSheet("QLabel { color: #FF9800; font-size: 12px; }");
+        }
+    } else if (shouldAutoStartCycle && isCycleRunning && currentCycleCount < currentCycleConfig.cycleCount) {
         emit logMessage("检测到需要恢复的循环任务");
 
         // 立即设置恢复标志，防止重复调用
@@ -671,6 +847,7 @@ void CycleController::performRestore()
     // 关键修复：确保状态正确同步
     isCycleRunning = true;
     shouldAutoStartCycle = true;
+    cycleStartTime = QDateTime::currentDateTime();  // 记录循环开始时间
 
     emit logMessage(QString("恢复状态: 操作=%1, 已完成=%2/%3, 倒计时=%4")
                   .arg(getOperationName(currentCycleConfig.operation))
@@ -731,6 +908,7 @@ void CycleController::clearCycleState()
     // 重置内部状态
     shouldAutoStartCycle = false;
     isFirstStartAfterReboot = false;
+    isCyclePaused = false;
 
     // 关键修复：只有在循环完成时才重置计数
     if (currentCycleCount >= currentCycleConfig.cycleCount) {

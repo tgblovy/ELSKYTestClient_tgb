@@ -1,0 +1,21 @@
+[Unit]
+Description=ELSKY Test Client
+After=graphical-session.target
+After=network.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sleep 5
+ExecStart=/usr/lib/elsky-test-client/ELSKYTestClient
+WorkingDirectory=/home/testuser
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/testuser/.Xauthority
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=LD_LIBRARY_PATH=/usr/lib/elsky-test-client/lib
+Restart=on-failure
+RestartSec=10
+TimeoutSec=30
+
+[Install]
+WantedBy=default.target

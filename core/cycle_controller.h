@@ -11,6 +11,7 @@
 #include <QDialog>        // 添加这行
 #include <QVBoxLayout>    // 添加这行
 #include <QMessageBox>    // 添加这行
+#include <QDateTime>      // 添加用于时间计算
 #include "../common/protocol.h"
 
 class AutoStartManager;
@@ -29,19 +30,27 @@ public:
 
     void startCycleWithConfig(CycleOperation operation, int intervalSeconds, int cycleCount);
     void stopCycle();
+    void pauseCycle();
+    void resumeCycle();
     void restoreCycle();
     void saveState();
 
     bool isRunning() const { return isCycleRunning; }
+    bool isPaused() const { return isCyclePaused; }
 
     // 新增公共方法用于处理开机启动状态变化
     void handleAutoStartStatusChanged(bool enabled);
+    
+    // 新增公共方法用于UI更新
+    void resetToggleButtonText();
+    void updateStatusLabel(const QString& text, const QString& styleSheet = "");
 
 signals:
     void cycleStatusChanged(const QString &status);
     void logMessage(const QString &message);
     void operationExecuted();
     void cycleCompleted(); // 新增完成信号
+    void cycleRunningChanged(bool running);  // 新增：循环运行状态变化信号
 
 public slots:  // 改为 public slots
     void onCycleToggle();
@@ -69,12 +78,15 @@ private:
     AutoStartManager *autoStartManager;
 
     bool isCycleRunning;
+    bool isCyclePaused;
     int currentCycleCount;
     int countdownSeconds;
     CycleConfig currentCycleConfig;
     bool shouldAutoStartCycle;
     bool isFirstStartAfterReboot;
     bool isRestoringCycle;
+
+    QDateTime cycleStartTime;  // 循环开始时间（用于判断是否为系统启动后的验证）
 };
 
 #endif // CYCLE_CONTROLLER_H

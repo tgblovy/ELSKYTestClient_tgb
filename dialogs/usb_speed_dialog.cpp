@@ -1,4 +1,5 @@
 #include "usb_speed_dialog.h"
+#include "../core/privilege_helper.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -36,6 +37,19 @@ UsbSpeedTestDialog::~UsbSpeedTestDialog()
 {
     if (progressTimer && progressTimer->isActive()) {
         progressTimer->stop();
+    }
+    // 测试进行中关闭对话框：终止子进程并清理临时脚本
+    if (testTimeoutTimer && testTimeoutTimer->isActive()) {
+        testTimeoutTimer->stop();
+    }
+    if (testProcess) {
+        testProcess->disconnect(this);
+        if (testProcess->state() == QProcess::Running) {
+            testProcess->kill();
+        }
+        testProcess->deleteLater();
+        testProcess = nullptr;
+        QFile::remove(tempScriptPath);
     }
 }
 
@@ -150,7 +164,7 @@ void UsbSpeedTestDialog::detectUsbDrives()
 
             // 判断设备类型
             QString deviceType = "U盘";
-            if (drive.bytesTotal() > 32L * 1024 * 1024 * 1024) {
+            if (drive.bytesTotal() > static_cast<qint64>(32) * 1024 * 1024 * 1024) {
                 deviceType = "移动硬盘";
             }
 
@@ -235,50 +249,19 @@ void UsbSpeedTestDialog::onStartTest()
         progressTimer->stop();
     }
 
-    // 在新线程中执行测试，避免界面冻结
-    QTimer::singleShot(100, this, [this, selectedDrive, testFileSizeMB]() {
-        QString result = performSpeedTest();
-        resultEdit->append("\n测试完成\n");
-        resultEdit->append("测试结果\n");
-        resultEdit->append(result);
-
-        progressBar->setValue(100);
+    // 修复：原实现 QTimer::singleShot + performSpeedTest() 内部
+    // waitForFinished(300000) 在 GUI 主线程同步阻塞最长 5 分钟，事件循环被
+    // 卡死（进度条、按钮全部无响应）。改为信号驱动：进程输出通过
+    // readyReadStandardOutput 增量读取，完成通过 finished 信号回调，
+    // GUI 事件循环全程保持响应。
+    if (!startDDTestAsRoot(selectedDrive, testFileSizeMB)) {
+        resultEdit->append("✗ 精确测试失败，请检查权限和驱动器状态");
         startTestButton->setEnabled(true);
         refreshButton->setEnabled(true);
-
-        QTimer::singleShot(1000, this, [this]() {
-            progressBar->setVisible(false);
-        });
-    });
-}
-
-QString UsbSpeedTestDialog::performSpeedTest()
-{
-    QString selectedDrive = driveCombo->currentData().toString();
-    int testFileSizeMB = testFileSizeCombo->currentData().toInt();
-
-    double writeSpeed = 0.0;
-    double readSpeed = 0.0;
-
-    resultEdit->append("使用精确模式(dd命令)进行测试...");
-
-    if (runDDTestAsRoot(selectedDrive, testFileSizeMB, writeSpeed, readSpeed)) {
-        resultEdit->append("✓ 精确测试完成");
-    } else {
-        resultEdit->append("✗ 精确测试失败，请检查权限和驱动器状态");
-        return "错误: 精确测试失败，请确保有管理员权限且驱动器可用";
+        progressBar->setVisible(false);
+        return;
     }
-
-    // 构建结果字符串
-    QString result;
-    result += QString("驱动器: %1\n").arg(driveCombo->currentText());
-    result += QString("测试文件大小: %1 MB\n").arg(testFileSizeMB);
-    result += QString("写入速度: %1 MB/s\n").arg(QString::number(writeSpeed, 'f', 2));
-    result += QString("读取速度: %1 MB/s\n").arg(QString::number(readSpeed, 'f', 2));
-    result += QString("性能评价: %1").arg(evaluatePerformance(writeSpeed, readSpeed));
-    result += "\n(使用精确测试模式 - 绕过系统缓存)";
-
-    return result;
+    // 测试进行中：结果与进度由 onTestProcessReadyRead/onTestProcessFinished 更新
 }
 
 QString UsbSpeedTestDialog::createTestScript(const QString &drivePath, int testFileSizeMB)
@@ -286,6 +269,9 @@ QString UsbSpeedTestDialog::createTestScript(const QString &drivePath, int testF
     QString scriptContent = QString(
         "#!/bin/bash\n"
         "set -e\n"
+        "\n"
+        "# 统一数字输出格式，避免部分 locale 用逗号作小数分隔符导致速度解析失败\n"
+        "export LC_ALL=C\n"
         "\n"
         "DRIVE_PATH=\"%1\"\n"
         "TEST_FILE=\"$DRIVE_PATH/usb_speed_test.dat\"\n"
@@ -295,10 +281,10 @@ QString UsbSpeedTestDialog::createTestScript(const QString &drivePath, int testF
         "echo \"驱动器: $DRIVE_PATH\"\n"
         "echo \"测试文件大小: ${TEST_SIZE}MB\"\n"
         "\n"
-        "# 清理缓存\n"
+        "# 清理缓存（失败不中断：非 root 或内核限制时仅影响缓存绕过精度）\n"
         "echo \"清理系统缓存...\"\n"
         "sync\n"
-        "echo 3 > /proc/sys/vm/drop_caches\n"
+        "echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || echo \"警告: 无法清理缓存（不影响测试，仅精度略降）\"\n"
         "\n"
         "# 写入测试\n"
         "echo \"执行写入测试...\"\n"
@@ -318,7 +304,7 @@ QString UsbSpeedTestDialog::createTestScript(const QString &drivePath, int testF
         "# 清理缓存\n"
         "echo \"清理缓存准备读取测试...\"\n"
         "sync\n"
-        "echo 3 > /proc/sys/vm/drop_caches\n"
+        "echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true\n"
         "sleep 2\n"
         "\n"
         "# 读取测试\n"
@@ -351,10 +337,19 @@ QString UsbSpeedTestDialog::createTestScript(const QString &drivePath, int testF
     return scriptContent;
 }
 
-bool UsbSpeedTestDialog::runDDTestAsRoot(const QString &drivePath, int testFileSizeMB, double &writeSpeed, double &readSpeed)
+bool UsbSpeedTestDialog::startDDTestAsRoot(const QString &drivePath, int testFileSizeMB)
 {
-    // 创建临时脚本文件
-    QString tempScriptPath = "/tmp/usb_speed_test.sh";
+    // 防重入：上一次测试仍在进行
+    if (testProcess && testProcess->state() == QProcess::Running) {
+        resultEdit->append("错误: 上一次测试尚未结束");
+        return false;
+    }
+
+    currentTestSizeMB = testFileSizeMB;
+    testOutput.clear();
+
+    // 创建临时脚本文件（修复C8：带 PID 防多实例互相覆盖/误删）
+    tempScriptPath = QString("/tmp/usb_speed_test_%1.sh").arg(QApplication::applicationPid());
     QFile scriptFile(tempScriptPath);
 
     if (!scriptFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -372,56 +367,69 @@ bool UsbSpeedTestDialog::runDDTestAsRoot(const QString &drivePath, int testFileS
                          QFile::ReadGroup | QFile::ExeGroup |
                          QFile::ReadOther | QFile::ExeOther);
 
-    // 使用pkexec以root权限运行脚本
-    resultEdit->append("正在请求管理员权限...");
+    // 使用统一权限模块启动提权进程（首次需弹窗，后续自动免密/记忆密码）
+    resultEdit->append("正在准备测试环境（需要管理员权限）...");
     QApplication::processEvents();
 
-    QProcess process;
-    process.start("pkexec", QStringList() << "bash" << tempScriptPath);
-
-    if (!process.waitForStarted(1000)) {
-        resultEdit->append("错误: 无法启动测试进程");
+    QString privErr;
+    testProcess = PrivilegeHelper::startPrivileged(
+        QStringList() << tempScriptPath, &privErr);
+    if (!testProcess) {
+        resultEdit->append("错误: " + privErr);
         QFile::remove(tempScriptPath);
         return false;
     }
 
-    // 读取输出并显示进度
-    QString output;
-    QTimer progressTimer;
-    int progressValue = 10;
-    progressTimer.start(200);
+    // 信号驱动：增量读取输出 + 完成回调 + 总超时（GUI 全程不阻塞）
+    connect(testProcess, &QProcess::readyReadStandardOutput,
+            this, &UsbSpeedTestDialog::onTestProcessReadyRead);
+    connect(testProcess,
+            QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, &UsbSpeedTestDialog::onTestProcessFinished);
 
-    QObject::connect(&progressTimer, &QTimer::timeout, [this, &process, &output, &progressValue]() {
-        if (process.state() == QProcess::Running) {
-            output += process.readAllStandardOutput();
-
-            // 更新进度显示
-            if (output.contains("写入测试")) {
-                progressValue = 30;
-            } else if (output.contains("读取测试")) {
-                progressValue = 70;
-            } else if (progressValue < 90) {
-                progressValue += 1;
-            }
-
-            progressBar->setValue(progressValue);
-            QApplication::processEvents();
-        }
-    });
-
-    // 等待测试完成
-    if (!process.waitForFinished(300000)) {
-        progressTimer.stop();
-        resultEdit->append("错误: 测试超时");
-        QFile::remove(tempScriptPath);
-        return false;
+    if (!testTimeoutTimer) {
+        testTimeoutTimer = new QTimer(this);
+        testTimeoutTimer->setSingleShot(true);
+        connect(testTimeoutTimer, &QTimer::timeout, this, &UsbSpeedTestDialog::onTestTimeout);
     }
+    testTimeoutTimer->start(300000); // 5 分钟总超时
 
-    progressTimer.stop();
+    progressBar->setValue(10);
+    return true;
+}
 
-    // 获取完整输出
-    output += process.readAllStandardOutput();
-    QString errorOutput = process.readAllStandardError();
+void UsbSpeedTestDialog::onTestProcessReadyRead()
+{
+    if (!testProcess) return;
+
+    testOutput += testProcess->readAllStandardOutput();
+
+    // 按测试阶段更新进度（事件循环正常运转，进度条实时刷新）
+    int v = progressBar->value();
+    if (testOutput.contains("读取测试")) {
+        v = qMax(v, 70);
+    } else if (testOutput.contains("写入测试")) {
+        v = qMax(v, 30);
+    } else if (v < 90) {
+        v += 1;
+    }
+    progressBar->setValue(v);
+}
+
+void UsbSpeedTestDialog::onTestProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    Q_UNUSED(exitStatus)
+
+    if (testTimeoutTimer && testTimeoutTimer->isActive()) {
+        testTimeoutTimer->stop();
+    }
+    if (!testProcess) return;
+
+    testOutput += testProcess->readAllStandardOutput();
+    QString errorOutput = testProcess->readAllStandardError();
+    testProcess->deleteLater();
+    testProcess = nullptr;
+    QFile::remove(tempScriptPath);
 
     if (!errorOutput.isEmpty()) {
         resultEdit->append("错误输出: " + errorOutput);
@@ -429,8 +437,31 @@ bool UsbSpeedTestDialog::runDDTestAsRoot(const QString &drivePath, int testFileS
 
     // 显示测试过程
     resultEdit->append("测试过程:");
-    resultEdit->append(output);
+    resultEdit->append(testOutput);
 
+    double writeSpeed = 0.0;
+    double readSpeed = 0.0;
+    if (exitCode != 0 || !parseSpeedResult(testOutput, writeSpeed, readSpeed)) {
+        resultEdit->append("错误: 无法解析测试结果");
+        finishTestUi(false, 0.0, 0.0);
+        return;
+    }
+
+    resultEdit->append(QString("解析结果 - 写入: %1 MB/s, 读取: %2 MB/s")
+                           .arg(writeSpeed, 0, 'f', 2).arg(readSpeed, 0, 'f', 2));
+    finishTestUi(true, writeSpeed, readSpeed);
+}
+
+void UsbSpeedTestDialog::onTestTimeout()
+{
+    if (testProcess && testProcess->state() == QProcess::Running) {
+        resultEdit->append("错误: 测试超时，已终止测试进程");
+        testProcess->kill();
+    }
+}
+
+bool UsbSpeedTestDialog::parseSpeedResult(const QString &output, double &writeSpeed, double &readSpeed)
+{
     // 解析结果
     QRegularExpression writeRe("WRITE_SPEED=([0-9]+(?:\\.[0-9]+)?)");
     QRegularExpression writeUnitRe("WRITE_UNIT=([KMGT]B/s)");
@@ -458,41 +489,56 @@ bool UsbSpeedTestDialog::runDDTestAsRoot(const QString &drivePath, int testFileS
             if (unit == "KB/s") readSpeed /= 1024.0;
             else if (unit == "GB/s") readSpeed *= 1024.0;
         }
-
-        resultEdit->append(QString("解析结果 - 写入: %1 MB/s, 读取: %2 MB/s").arg(writeSpeed, 0, 'f', 2).arg(readSpeed, 0, 'f', 2));
-    } else {
-        // 如果解析失败，尝试从输出中提取速度
-        QRegularExpression speedRe("([0-9]+(?:\\.[0-9]+)?)\\s*([KMGT]?B/s)");
-        QRegularExpressionMatchIterator matches = speedRe.globalMatch(output);
-
-        QList<double> speeds;
-        while (matches.hasNext()) {
-            QRegularExpressionMatch match = matches.next();
-            double speed = match.captured(1).toDouble();
-            QString unit = match.captured(2);
-
-            // 转换为MB/s
-            if (unit == "KB/s") speed /= 1024.0;
-            else if (unit == "GB/s") speed *= 1024.0;
-
-            speeds.append(speed);
-        }
-
-        if (speeds.size() >= 2) {
-            writeSpeed = speeds[0];
-            readSpeed = speeds[1];
-            resultEdit->append(QString("备选解析 - 写入: %1 MB/s, 读取: %2 MB/s").arg(writeSpeed, 0, 'f', 2).arg(readSpeed, 0, 'f', 2));
-        } else {
-            resultEdit->append("错误: 无法解析测试结果");
-            QFile::remove(tempScriptPath);
-            return false;
-        }
+        return true;
     }
 
-    // 清理临时脚本
-    QFile::remove(tempScriptPath);
+    // 如果解析失败，尝试从输出中提取速度
+    QRegularExpression speedRe("([0-9]+(?:\\.[0-9]+)?)\\s*([KMGT]?B/s)");
+    QRegularExpressionMatchIterator matches = speedRe.globalMatch(output);
 
-    return true;
+    QList<double> speeds;
+    while (matches.hasNext()) {
+        QRegularExpressionMatch match = matches.next();
+        double speed = match.captured(1).toDouble();
+        QString unit = match.captured(2);
+
+        // 转换为MB/s
+        if (unit == "KB/s") speed /= 1024.0;
+        else if (unit == "GB/s") speed *= 1024.0;
+
+        speeds.append(speed);
+    }
+
+    if (speeds.size() >= 2) {
+        writeSpeed = speeds[0];
+        readSpeed = speeds[1];
+        resultEdit->append(QString("备选解析 - 写入: %1 MB/s, 读取: %2 MB/s")
+                               .arg(writeSpeed, 0, 'f', 2).arg(readSpeed, 0, 'f', 2));
+        return true;
+    }
+    return false;
+}
+
+void UsbSpeedTestDialog::finishTestUi(bool success, double writeSpeed, double readSpeed)
+{
+    if (success) {
+        resultEdit->append("✓ 精确测试完成\n");
+        resultEdit->append("测试结果");
+        resultEdit->append(QString("驱动器: %1").arg(driveCombo->currentText()));
+        resultEdit->append(QString("测试文件大小: %1 MB").arg(currentTestSizeMB));
+        resultEdit->append(QString("写入速度: %1 MB/s").arg(QString::number(writeSpeed, 'f', 2)));
+        resultEdit->append(QString("读取速度: %1 MB/s").arg(QString::number(readSpeed, 'f', 2)));
+        resultEdit->append(QString("性能评价: %1").arg(evaluatePerformance(writeSpeed, readSpeed)));
+        resultEdit->append("(使用精确测试模式 - 绕过系统缓存)");
+        progressBar->setValue(100);
+    }
+
+    startTestButton->setEnabled(true);
+    refreshButton->setEnabled(true);
+
+    QTimer::singleShot(1000, this, [this]() {
+        progressBar->setVisible(false);
+    });
 }
 
 QString UsbSpeedTestDialog::evaluatePerformance(double writeSpeed, double readSpeed)

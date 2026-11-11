@@ -1,0 +1,15 @@
+Package: elsky-test-client
+Version: 2.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: ELSKY <support@elsky.com>
+Depends: python3, policykit-1
+Recommends: libqt5core5a | libqt5core5t64, libqt5gui5 | libqt5gui5t64, libqt5widgets5 | libqt5widgets5t64, libqt5network5 | libqt5network5t64, libqt5serialport5 | libqt5serialport5t64, python3-pyqt5, python3-pyqt5.qtopengl, python3-psutil, python3-opengl
+Suggests: libqt5serialport5-dev, python3-pyqt5.qtopengl
+Description: 研盛测试客户端 - 电源管理、网络唤醒、系统监控、设备检测、老化测试工具
+ 研盛测试客户端，提供电源管理、网络唤醒(WOL)、系统监控、
+ 设备实时监控、USB/串口/网络测试、老化测试等功能。
+ 支持飞腾ARM64与X86平台。
+ .
+ 首次启动会自动检测并安装缺失依赖（需联网），无需用户手动配置。

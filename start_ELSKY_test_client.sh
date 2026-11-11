@@ -9,11 +9,14 @@ if [ "$ARCH" = "aarch64" ]; then
     echo "检测到飞腾ARM64平台"
 elif [[ "$ARCH" =~ "x86_64" || "$ARCH" =~ "i386" || "$ARCH" =~ "i686" ]]; then
     echo "检测到X86平台"
+elif [[ "$ARCH" =~ ^(loongarch64|loong64|loongarch|mips64el|mips64|mipsel)$ ]]; then
+    echo "检测到龙芯平台 ($ARCH)"
 else
     echo "错误: 不支持的平台架构: $ARCH"
     echo "支持的平台:"
     echo "  - x86_64, i386, i686 (X86平台)"
     echo "  - aarch64 (飞腾ARM64平台)"
+    echo "  - loongarch64, loong64, mips64el (龙芯 LoongArch/MIPS64el)"
     exit 1
 fi
 

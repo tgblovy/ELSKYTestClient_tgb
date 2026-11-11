@@ -15,7 +15,8 @@ enum MessageType {
     MSG_STATUS_RESPONSE,        // 状态响应
     MSG_MANUAL_WAKE_REQUEST,    // 手动唤醒请求
     MSG_WAKE_ON_LAN_CANCEL,     // 取消网络唤醒
-    MSG_CYCLE_CONTROL           // 循环控制
+    MSG_CYCLE_CONTROL,          // 循环控制
+    MSG_UNIFIED_CONTROL         // 统一控制
 };
 
 // 循环操作类型

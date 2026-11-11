@@ -23,6 +23,10 @@ public:
 signals:
     void logMessage(const QString &message);
 
+public slots:
+    void startWakeOnLanAuto();
+    void cancelWakeOnLanAuto();
+
 private slots:
     void onWakeOnLanToggle();
 

@@ -1,89 +1,81 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'logger.h'
 **
-** Created by: The Qt Meta Object Compiler version 67 (Qt 5.12.12)
+** Created by: The Qt Meta Object Compiler version 69 (Qt 6.11.1)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
 #include "../../core/logger.h"
-#include <QtCore/qbytearray.h>
+#include <QtGui/qtextcursor.h>
 #include <QtCore/qmetatype.h>
+
+#include <QtCore/qtmochelpers.h>
+
+#include <memory>
+
+
+#include <QtCore/qxptype_traits.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
 #error "The header file 'logger.h' doesn't include <QObject>."
-#elif Q_MOC_OUTPUT_REVISION != 67
-#error "This file was generated using the moc from 5.12.12. It"
+#elif Q_MOC_OUTPUT_REVISION != 69
+#error "This file was generated using the moc from 6.11.1. It"
 #error "cannot be used with the include files from this version of Qt."
 #error "(The moc has changed too much.)"
 #endif
 
-QT_BEGIN_MOC_NAMESPACE
+#ifndef Q_CONSTINIT
+#define Q_CONSTINIT
+#endif
+
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
-struct qt_meta_stringdata_Logger_t {
-    QByteArrayData data[3];
-    char stringdata0[20];
-};
-#define QT_MOC_LITERAL(idx, ofs, len) \
-    Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
-    qptrdiff(offsetof(qt_meta_stringdata_Logger_t, stringdata0) + ofs \
-        - idx * sizeof(QByteArrayData)) \
-    )
-static const qt_meta_stringdata_Logger_t qt_meta_stringdata_Logger = {
-    {
-QT_MOC_LITERAL(0, 0, 6), // "Logger"
-QT_MOC_LITERAL(1, 7, 11), // "onClearLogs"
-QT_MOC_LITERAL(2, 19, 0) // ""
+QT_WARNING_DISABLE_GCC("-Wuseless-cast")
+namespace {
+struct qt_meta_tag_ZN6LoggerE_t {};
+} // unnamed namespace
 
-    },
-    "Logger\0onClearLogs\0"
-};
-#undef QT_MOC_LITERAL
+template <> constexpr inline auto Logger::qt_create_metaobjectdata<qt_meta_tag_ZN6LoggerE_t>()
+{
+    namespace QMC = QtMocConstants;
+    QtMocHelpers::StringRefStorage qt_stringData {
+        "Logger",
+        "onClearLogs",
+        ""
+    };
 
-static const uint qt_meta_data_Logger[] = {
-
- // content:
-       8,       // revision
-       0,       // classname
-       0,    0, // classinfo
-       1,   14, // methods
-       0,    0, // properties
-       0,    0, // enums/sets
-       0,    0, // constructors
-       0,       // flags
-       0,       // signalCount
-
- // slots: name, argc, parameters, tag, flags
-       1,    0,   19,    2, 0x08 /* Private */,
-
- // slots: parameters
-    QMetaType::Void,
-
-       0        // eod
-};
+    QtMocHelpers::UintData qt_methods {
+        // Slot 'onClearLogs'
+        QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
+    };
+    QtMocHelpers::UintData qt_properties {
+    };
+    QtMocHelpers::UintData qt_enums {
+    };
+    return QtMocHelpers::metaObjectData<Logger, qt_meta_tag_ZN6LoggerE_t>(QMC::MetaObjectFlag{}, qt_stringData,
+            qt_methods, qt_properties, qt_enums);
+}
+Q_CONSTINIT const QMetaObject Logger::staticMetaObject = { {
+    QMetaObject::SuperData::link<QObject::staticMetaObject>(),
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN6LoggerE_t>.stringdata,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN6LoggerE_t>.data,
+    qt_static_metacall,
+    nullptr,
+    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN6LoggerE_t>.metaTypes,
+    nullptr
+} };
 
 void Logger::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
+    auto *_t = static_cast<Logger *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
-        auto *_t = static_cast<Logger *>(_o);
-        Q_UNUSED(_t)
         switch (_id) {
         case 0: _t->onClearLogs(); break;
         default: ;
         }
     }
-    Q_UNUSED(_a);
+    (void)_a;
 }
-
-QT_INIT_METAOBJECT const QMetaObject Logger::staticMetaObject = { {
-    &QObject::staticMetaObject,
-    qt_meta_stringdata_Logger.data,
-    qt_meta_data_Logger,
-    qt_static_metacall,
-    nullptr,
-    nullptr
-} };
-
 
 const QMetaObject *Logger::metaObject() const
 {
@@ -93,7 +85,7 @@ const QMetaObject *Logger::metaObject() const
 void *Logger::qt_metacast(const char *_clname)
 {
     if (!_clname) return nullptr;
-    if (!strcmp(_clname, qt_meta_stringdata_Logger.stringdata0))
+    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN6LoggerE_t>.strings))
         return static_cast<void*>(this);
     return QObject::qt_metacast(_clname);
 }
@@ -107,12 +99,12 @@ int Logger::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         if (_id < 1)
             qt_static_metacall(this, _c, _id, _a);
         _id -= 1;
-    } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+    }
+    if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
         if (_id < 1)
-            *reinterpret_cast<int*>(_a[0]) = -1;
+            *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
         _id -= 1;
     }
     return _id;
 }
 QT_WARNING_POP
-QT_END_MOC_NAMESPACE

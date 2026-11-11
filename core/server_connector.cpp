@@ -31,9 +31,18 @@ void ServerConnector::setupUI(QCheckBox *checkBox)
 
     // 加载保存的设置
     QSettings settings("ELSKY", "TestClient");
-    bool serverConnected = settings.value("server/connected", false).toBool();
     serverIP = settings.value("server/ip", "").toString();
-    serverCheckBox->setChecked(serverConnected);
+    bool serverConnected = settings.value("server/connected", false).toBool();
+
+    if (serverConnected && !serverIP.isEmpty()) {
+        // 上次连接过服务器，自动恢复连接
+        serverCheckBox->blockSignals(true);
+        serverCheckBox->setChecked(true);
+        serverCheckBox->setText("连接服务器 (" + serverIP + ")");
+        serverCheckBox->blockSignals(false);
+        emit logMessage(QString("自动恢复服务器连接: %1").arg(serverIP));
+        connectToServer(serverIP);
+    }
 }
 
 void ServerConnector::connectToServer(const QString &ip)
@@ -70,7 +79,12 @@ void ServerConnector::sendMessage(const NetworkMessage &msg)
 void ServerConnector::onConnected()
 {
     m_isConnected = true;
-    emit logMessage("成功连接到服务器");
+
+    // 保存连接状态
+    QSettings settings("ELSKY", "TestClient");
+    settings.setValue("server/connected", true);
+
+    emit logMessage("成功连接到服务器 " + serverIP);
     emit connectionStatusChanged(true);
 }
 
@@ -108,9 +122,10 @@ void ServerConnector::onServerConnectToggled(bool checked)
         QString ip = QInputDialog::getText(nullptr, "连接服务器",
                                          "请输入服务器IP地址:",
                                          QLineEdit::Normal,
-                                         "192.168.1.100", &ok);
+                                         "192.168.1.180", &ok);
         if (ok && !ip.isEmpty()) {
             serverIP = ip;
+            serverCheckBox->setText("连接服务器 (" + ip + ")");
             emit logMessage("尝试连接服务器: " + ip);
             connectToServer(ip);
 
@@ -125,6 +140,7 @@ void ServerConnector::onServerConnectToggled(bool checked)
             disconnectFromServer();
         }
         serverIP.clear();
+        serverCheckBox->setText("连接服务器");
         emit logMessage("已断开服务器连接");
 
         // 保存设置

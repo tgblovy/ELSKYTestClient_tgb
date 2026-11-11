@@ -1,5 +1,6 @@
 #include "protocol.h"
 #include <QDataStream>
+#include <QIODevice>
 
 QByteArray NetworkMessage::toByteArray() const {
     QByteArray data;

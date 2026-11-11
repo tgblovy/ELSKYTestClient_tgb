@@ -1,0 +1,57 @@
+#!/bin/bash
+# 安装后脚本：一次性配置权限，使软件各功能免密运行
+# 注意：使用 set +e（默认），每个步骤独立处理失败，避免中断整个安装
+
+CURRENT_USER="${SUDO_USER:-$USER}"
+if [ -z "$CURRENT_USER" ]; then
+    CURRENT_USER=$(logname 2>/dev/null || echo "")
+fi
+# 即使无法获取用户，也尝试写一个通用 sudoers 模板，由用户后续按需调整
+if [ -z "$CURRENT_USER" ] || [ "$CURRENT_USER" = "root" ]; then
+    CURRENT_USER="USERNAME_PLACEHOLDER"
+fi
+
+echo ""
+echo "=== 配置研盛测试客户端权限 ==="
+
+# 0. 修正安装目录权限：确保所有用户可读可执行
+chmod -R a+rX /usr/lib/elsky-test-client/ 2>/dev/null
+chmod 755 /usr/lib/elsky-test-client/ELSKYTestClient 2>/dev/null
+chmod 755 /usr/lib/elsky-test-client/elsky-test-client.sh 2>/dev/null
+chmod 755 /usr/lib/elsky-test-client/elsky-test-client.desktop 2>/dev/null
+
+# 1. 配置 sudoers 免密：仅授权本软件需要的具体命令（最小权限原则）
+# 注意：systemctl/poweroff/reboot/shutdown 必须在列（循环开关机测试依赖，否则会卡在"正在准备重启"）
+SUDOERS_FILE="/etc/sudoers.d/elsky-test-client"
+cat > "$SUDOERS_FILE" << SUDO_EOF
+# 研盛测试客户端 - 最小化免密授权
+$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/apt, /usr/bin/dpkg, /usr/sbin/ethtool, /usr/bin/nmcli, /usr/bin/systemctl, /usr/sbin/systemctl, /usr/sbin/poweroff, /usr/sbin/reboot, /usr/sbin/shutdown, /usr/bin/poweroff, /usr/bin/reboot, /usr/bin/shutdown
+SUDO_EOF
+chmod 440 "$SUDOERS_FILE" 2>/dev/null
+echo "  ✓ sudoers 免密已配置（含关机/重启/依赖安装命令）: $SUDOERS_FILE"
+
+# 2. 加入 dialout 组（串口访问权限）
+if command -v usermod >/dev/null 2>&1 && [ "$CURRENT_USER" != "USERNAME_PLACEHOLDER" ]; then
+    usermod -aG dialout "$CURRENT_USER" 2>/dev/null
+    echo "  ✓ 已加入 dialout 组（串口访问，重新登录后生效）"
+fi
+
+# 3. 刷新桌面图标缓存（不强制）
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications 2>/dev/null
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache /usr/share/icons/hicolor 2>/dev/null
+fi
+
+# 4. 如果是 USERNAME_PLACEHOLDER 状态，提示用户手动配置
+if [ "$CURRENT_USER" = "USERNAME_PLACEHOLDER" ]; then
+    echo ""
+    echo "  ⚠ 未检测到当前用户，请手动配置免密权限："
+    echo "    sudo sed -i 's/USERNAME_PLACEHOLDER/\$USER/' $SUDOERS_FILE"
+fi
+
+echo "=== 研盛测试客户端安装完成 ==="
+echo "  桌面已生成'研盛测试客户端'图标，双击启动"
+echo "  各功能已配置免密权限，无需重复输入密码"
+exit 0

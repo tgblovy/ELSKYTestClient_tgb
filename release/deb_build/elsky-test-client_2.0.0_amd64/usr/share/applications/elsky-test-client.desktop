@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=研盛测试客户端
+GenericName=研盛测试客户端
+Comment=电源管理、网络唤醒、系统监控、设备检测、老化测试工具
+Exec=/usr/lib/elsky-test-client/elsky-test-client.sh %F
+Icon=elsky-test-client
+Terminal=false
+Categories=Utility;System;
+StartupNotify=true
+StartupWMClass=ELSKYTestClient
+MimeType=application/octet-stream;
